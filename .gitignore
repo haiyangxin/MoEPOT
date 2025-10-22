@@ -13,6 +13,7 @@ interpretability_moe.py
 visual_train.py
 README-dpot.md
 resources/dpot.jpg
+resources/dpot_result.jpg
 dataset
 evaluate_varyingres.py
 test.sh
