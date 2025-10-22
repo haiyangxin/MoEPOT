@@ -6,7 +6,7 @@ Code for [paper] MoEPOT: Auto-Regressive Denoising Operator Transformer for Larg
 
 Our pre-trained MoE-POT achieves the state-of-the-art performance on multiple PDE datasets and could be used for finetuning on different types of downstream PDE problems.
 
-![fig2](/resources/MoE-POT_results.png)
+![fig2](/resources/MoE-POT_result.png)
 
 ### Usage 
 
