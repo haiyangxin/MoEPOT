@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import Tuple
+import os
 
 from data_generation.cfdbench.base import CfdDataset, CfdAutoDataset
 from data_generation.cfdbench.tube import get_tube_datasets, get_tube_auto_datasets
@@ -80,7 +81,7 @@ def get_auto_dataset(
     print("Loading data...")
     if problem_name == "tube":
         train_data, dev_data, test_data = get_tube_auto_datasets(
-            data_dir / problem_name,
+            data_dir / problem_name, # 形成新的文件路径
             subset_name=subset_name,
             delta_time=delta_time,
             norm_props=norm_props,

@@ -20,6 +20,7 @@ from einops.layers.torch import Rearrange
 
 
 ACTIVATION = {'gelu':nn.GELU(),'tanh':nn.Tanh(),'sigmoid':nn.Sigmoid(),'relu':nn.ReLU(),'leaky_relu':nn.LeakyReLU(0.1),'softplus':nn.Softplus(),'ELU':nn.ELU(),'silu':nn.SiLU()}
+# 创建了一个字典
 
 
 

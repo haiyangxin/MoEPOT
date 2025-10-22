@@ -13,12 +13,15 @@ import os
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
 from pathlib import Path
+import sys
+# 添加项目根目录到Python路径
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from data_generation.cfdbench import get_auto_dataset
 
 
 
 def preprocess_mat():
-    data = h5py.File('/home/haozhongkai/files/ml4phys/mgn/pdessl/data/ns2d/ns_V1e-3_N5000_T50.mat')
+    data = h5py.File('./data/ns2d/ns_V1e-3_N5000_T50.mat')
     data = np.array(data['u'])
     data = np.transpose(data, (3,1,2,0))
     train_u = data[:4800]
@@ -31,6 +34,9 @@ def preprocess_mat():
 
 
 def save_hdf5():
+    '''
+    将.pkl文件转化为hdf5文件
+    '''
     import pickle
     import h5py
     import os
@@ -56,11 +62,11 @@ def save_hdf5():
 
 ### run with root
 def process_pdebench_data(path='/data/pdebench/164693',save_name='/data/pdebench/ns2d_pdb_M1_eta1e-8_zeta1e-8',n_train=9000, n_test=1000):
-    ### link: https://darus.uni-stuttgart.de/file.xhtml?fileId=164693&version=3.0
+    ### link: https://darus.uni-stuttgart.de/file.xhtml?fileId=133017&version=3.0
     ### keys: Vx, Vy, Vz, density, pressure, t-coordinate, x-coordinate, y-coordinate, z-coordinate
-    os.mkdir(save_name)
-    os.mkdir(save_name + '/train')
-    os.mkdir(save_name + '/test' )
+    os.makedirs(save_name, exist_ok=True)
+    os.makedirs(save_name + '/train', exist_ok=True)
+    os.makedirs(save_name + '/test', exist_ok=True )
     print('path created')
     with h5py.File(path, 'r') as f:
         keys = list(f.keys())
@@ -92,7 +98,6 @@ def process_pdebench_data(path='/data/pdebench/164693',save_name='/data/pdebench
         data = np.stack([vx, vy, density, pressure],axis=-1).transpose(0,2,3,1,4)
         # X = data[:,0:1]
         # Y = data[:,1:]
-        print(data.shape)   # B, X, Y, T, C
     del vx, vy,  density, pressure
 
 
@@ -107,8 +112,6 @@ def process_pdebench_data(path='/data/pdebench/164693',save_name='/data/pdebench
 
     # train_ids, test_ids = split_data(10000)
     train_ids, test_ids = np.arange(int(9/10 * data.shape[0])), np.arange(int(9/10 * data.shape[0]),data.shape[0])
-    print('train ids',train_ids)
-    print('test ids',test_ids)
 
     for i in range(n_train):
         with h5py.File(save_name + '/train/data_{}.hdf5'.format(i),'w') as f:
@@ -127,9 +130,9 @@ def process_pdebench_data(path='/data/pdebench/164693',save_name='/data/pdebench
 ### Shallow water PDE
 def process_swe_pdebench(path, save_name, n_train=900, n_test=100):
     ## t: 0~ 5, [101], x, y: -1~1. [128]
-    os.mkdir(save_name)
-    os.mkdir(save_name + '/train')
-    os.mkdir(save_name + '/test')
+    os.makedirs(save_name, exist_ok=True)
+    os.makedirs(save_name + '/train', exist_ok=True)
+    os.makedirs(save_name + '/test', exist_ok=True )
     print('path created')
     data = []
     with h5py.File(path, 'r') as fp:
@@ -162,9 +165,9 @@ def process_swe_pdebench(path, save_name, n_train=900, n_test=100):
 ### Diffusion Reaction PDE
 def process_dr_pdebench(path, save_name, n_train=900, n_test=100):
     ## t: 0~1, [101], x, y: -2.5~2.5 [128]
-    os.mkdir(save_name)
-    os.mkdir(save_name + '/train')
-    os.mkdir(save_name + '/test')
+    os.makedirs(save_name, exist_ok=True)
+    os.makedirs(save_name + '/train', exist_ok=True)
+    os.makedirs(save_name + '/test', exist_ok=True )
     print('path created')
     data = []
     with h5py.File(path, 'r') as fp:
@@ -428,14 +431,14 @@ def preprocess_cfdbench_data():
     delta_tube = 0.1
     delta_dam = 0.1
     train_data_cavity, dev_data_cavity, test_data_cavity = get_auto_dataset(
-        data_dir=Path('../../data/large/cfdbench'),
+        data_dir=Path('data/large/cfdbench'),
         data_name='cavity_prop_bc_geo',
         delta_time=0.1,
         norm_props=True,
         norm_bc=True,
     )
     train_data_cylinder, dev_data_cylinder, test_data_cylinder = get_auto_dataset(
-        data_dir=Path('../../data/large/cfdbench'),
+        data_dir=Path('data/large/cfdbench'),
         data_name='cylinder_prop_bc_geo',
         delta_time=0.1,
         norm_props=True,
@@ -449,7 +452,7 @@ def preprocess_cfdbench_data():
     #     norm_bc=True,
     # )
     train_data_tube, dev_data_tube, test_data_tube = get_auto_dataset(
-        data_dir=Path('../../data/large/cfdbench'),
+        data_dir=Path('data/large/cfdbench'),
         data_name='tube_prop_bc_geo',
         delta_time=0.1,
         norm_props=True,
@@ -506,41 +509,41 @@ def preprocess_cfdbench_data():
     train_data, test_data = train_data.transpose(0,3,4,1,2), test_data.transpose(0, 3, 4, 1, 2) # B, X, Y, T, C
     print(train_data.shape, test_data.shape)
 
-    with h5py.File('./../data/cfdbench/ns2d_cdb_train.hdf5','w') as fp:
+    with h5py.File('data/large/cfdbench/ns2d_cdb_train.hdf5','w') as fp:
         fp.create_dataset('data',data=train_data,compression=None)
 
 
 
-    with h5py.File('./../data/cfdbench/ns2d_cdb_test.hdf5','w') as fp:
+    with h5py.File('data/large/cfdbench/ns2d_cdb_test.hdf5','w') as fp:
         fp.create_dataset('data',data=test_data,compression=None)
 
 
 if __name__ == '__main__':
 
 
-    #### FNO datasets
+    # #### FNO datasets
     # preprocess_mat()
 
-    #### PDEBench datasets
-    process_pdebench_data(path='./../data/164687',save_name='./../data/pdebench/ns2d_pdb_M1e-1_eta1e-2_zeta1e-2',n_train=9000, n_test=1000)
-    process_pdebench_data(path='./../data/164688',save_name='./../data/pdebench/ns2d_pdb_M1e-1_eta1e-1_zeta1e-1',n_train=9000, n_test=1000)
-    process_pdebench_data(path='./../data/164690',save_name='./../data/pdebench/ns2d_pdb_M1_eta1e-2_zeta1e-2',n_train=9000, n_test=1000)
-    process_pdebench_data(path='./../data/164691',save_name='./../data//pdebench/ns2d_pdb_M1_eta1e-1_zeta1e-1',n_train=9000, n_test=1000)
-    process_pdebench_data(path='./../data/164685',save_name='./../data/pdebench/ns2d_pdb_M1e-1_eta1e-8_zeta1e-8_turb_512',n_train=900, n_test=100)
-    process_pdebench_data(path='./../data/164686',save_name='./../data/pdebench/ns2d_pdb_M1_eta1e-8_zeta1e-8_turb_512',n_train=900, n_test=100)
-    process_pdebench_data(path='./../data/164689',save_name='./../data/pdebench/ns2d_pdb_M1e-1_eta1e-8_zeta1e-8_rand_512',n_train=900, n_test=100)
-    process_pdebench_data(path='./../data/164692',save_name='./../data/pdebench/ns2d_pdb_M1_eta1e-8_zeta1e-8_rand_512',n_train=900, n_test=100)
-    process_swe_pdebench(path='./../data/133021',save_name='./../data/pdebench/swe_pdb',n_train=900, n_test=100)
-    process_dr_pdebench(path='./../data/133017',save_name='./../data/pdebench/dr_pdb',n_train=900, n_test=100)
-    process_pdebench3d_data(path='./../data/164693',save_name='./../data/pdebench/ns3d_pdb_M1_rand',n_train=90, n_test=10)
-    process_pdebench3d_data(path='./../data/173286',save_name='./../data/pdebench/ns3d_pdb_M1e-1_rand',n_train=90, n_test=10)
-    process_pdebench3d_data(path='./../data/164694',save_name='./../data/pdebench/ns3d_pdb_M1_turb',n_train=540, n_test=60)
+    # #### PDEBench datasets
+    # process_pdebench_data(path='./data/pdebench/164687.hdf5',save_name='./data/pdebench/ns2d_pdb_M1e-1_eta1e-2_zeta1e-2',n_train=9000, n_test=1000)  # true
+    # process_pdebench_data(path='./../data/large/pdebench/164688.hdf5',save_name='./../data/large/pdebench/ns2d_pdb_M1e-1_eta1e-1_zeta1e-1',n_train=9000, n_test=1000) # true
+    # process_pdebench_data(path='./../data/large/pdebench/164690.hdf5',save_name='./../data/large/pdebench/ns2d_pdb_M1_eta1e-2_zeta1e-2',n_train=9000, n_test=1000) # true
+    process_pdebench_data(path='./../data/large/pdebench/164691.hdf5',save_name='./../data/large/pdebench/ns2d_pdb_M1_eta1e-1_zeta1e-1',n_train=9000, n_test=1000)
+    # process_pdebench_data(path='./../data/164685',save_name='./../data/pdebench/ns2d_pdb_M1e-1_eta1e-8_zeta1e-8_turb_512',n_train=900, n_test=100)
+    # process_pdebench_data(path='./../data/164686',save_name='./../data/pdebench/ns2d_pdb_M1_eta1e-8_zeta1e-8_turb_512',n_train=900, n_test=100)
+    # process_pdebench_data(path='./../data/164689',save_name='./../data/pdebench/ns2d_pdb_M1e-1_eta1e-8_zeta1e-8_rand_512',n_train=900, n_test=100)
+    # process_pdebench_data(path='./../data/164692',save_name='./../data/pdebench/ns2d_pdb_M1_eta1e-8_zeta1e-8_rand_512',n_train=900, n_test=100)
+    # process_swe_pdebench(path='./data/pdebench/133021.h5',save_name='./data/pdebench/swe_pdb',n_train=900, n_test=100) # true
+    # process_dr_pdebench(path='./data/pdebench/133017.h5',save_name='./data/pdebench/dr_pdb',n_train=900, n_test=100) # true
+    # process_pdebench3d_data(path='./../data/164693',save_name='./../data/pdebench/ns3d_pdb_M1_rand',n_train=90, n_test=10)
+    # process_pdebench3d_data(path='./../data/173286',save_name='./../data/pdebench/ns3d_pdb_M1e-1_rand',n_train=90, n_test=10)
+    # process_pdebench3d_data(path='./../data/164694',save_name='./../data/pdebench/ns3d_pdb_M1_turb',n_train=540, n_test=60)
 
-    #### PDEArena datasets
+    # #### PDEArena datasets
     preprocess_ns2d()
-    preprocess_ns2d_cond()
-    preprocess_shallow_water()
+    # preprocess_ns2d_cond()
+    # preprocess_shallow_water()
 
 
-    #### CFDBench datasets
-    preprocess_cfdbench_data()
+    # #### CFDBench datasets
+    # preprocess_cfdbench_data()

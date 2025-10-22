@@ -1,13 +1,11 @@
 # Copyright (c) 2020, NVIDIA CORPORATION.  All rights reserved.
-
+# 经过fft后，变量的大小不会改变
 import numpy as np
 import torch
 import torch.fft
 import torch.nn as nn
 import torch.nn.functional as F
-
-
-
+from models.MoE_conv import MoEImage
 import math
 import logging
 from torch.nn.modules.container import Sequential
@@ -135,12 +133,9 @@ class Mlp(nn.Module):
 
 
 class Block(nn.Module):
-    def __init__(self, mixing_type = 'afno', double_skip = True, width = 32, n_blocks = 4, mlp_ratio=1., channel_first = True, modes = 32, drop=0., drop_path=0., act='gelu', h=14, w=8,):
+    def __init__(self, mixing_type = 'afno', double_skip = True, width = 32, n_blocks = 4, mlp_ratio=1., channel_first = True, modes = 32, drop=0., drop_path=0., act='gelu', h=14, w=8,is_finetune=False):
         super().__init__()
-        # self.norm1 = norm_layer(width)
-        # self.norm1 = torch.nn.LayerNorm([width])
         self.norm1 = torch.nn.GroupNorm(8, width)
-        # self.norm1 = torch.nn.InstanceNorm2d(width,affine=True,track_running_stats=False)
         self.width = width
         self.modes = modes
         self.act = ACTIVATION[act]
@@ -154,14 +149,12 @@ class Block(nn.Module):
 
 
         mlp_hidden_dim = int(width * mlp_ratio)
-        self.mlp = nn.Sequential(
-            nn.Conv2d(in_channels=width, out_channels=mlp_hidden_dim, kernel_size=1, stride=1),
-            self.act,
-            nn.Conv2d(in_channels=mlp_hidden_dim, out_channels=width, kernel_size=1, stride=1),
-        )
-
+        self.MoE = MoEImage(width, mlp_hidden_dim, output_channels=width, num_experts=16,shared_experts_num=2,top_k=4 ,is_finetune=is_finetune)
+        if is_finetune: # Freeze Gate Control Network
+            self.MoE.freeze_feature_and_gating()
+            self.MoE.feature_extractor.eval()
+            self.MoE.gating.eval()
         self.double_skip = double_skip
-
     def forward(self, x):
         residual = x
         x = self.norm1(x)
@@ -173,18 +166,16 @@ class Block(nn.Module):
             residual = x
 
         x = self.norm2(x)
-        x = self.mlp(x)
-
+        x, loss_gate = self.MoE(x)
+        
         x = x + residual
 
-        return x
+        return x, loss_gate
 
 
 class PatchEmbed(nn.Module):
     def __init__(self, img_size=224, patch_size=16, in_chans=3, embed_dim=768, out_dim=128,act='gelu'):
         super().__init__()
-        # img_size = to_2tuple(img_size)
-        # patch_size = to_2tuple(patch_size)
         img_size = (img_size, img_size)
         patch_size = (patch_size, patch_size)
         num_patches = (img_size[1] // patch_size[1]) * (img_size[0] // patch_size[0])
@@ -204,7 +195,6 @@ class PatchEmbed(nn.Module):
     def forward(self, x):
         B, C, H, W = x.shape
         assert H == self.img_size[0] and W == self.img_size[1], f"Input image size ({H}*{W}) doesn't match model ({self.img_size[0]}*{self.img_size[1]})."
-        # x = self.proj(x).flatten(2).transpose(1, 2)
         x = self.proj(x)
         return x
 
@@ -242,9 +232,9 @@ class TimeAggregator(nn.Module):
 
 
 
-class DPOTNet(nn.Module):
+class MoEPOTNet(nn.Module):
     def __init__(self, img_size=224, patch_size=16, mixing_type = 'afno',in_channels = 1, out_channels = 4, in_timesteps = 1, out_timesteps = 1, n_blocks = 4, embed_dim = 768, out_layer_dim = 32, depth = 12, modes = 32,
-                 mlp_ratio=1., n_cls = 12, normalize=False, act='gelu', time_agg='exp_mlp'):
+                 mlp_ratio=1., n_cls = 6, normalize=False, act='gelu', time_agg='exp_mlp',is_finetune=False):
         '''
 
         :param img_size: input resolution
@@ -265,7 +255,7 @@ class DPOTNet(nn.Module):
         :param act: activation type
         :param time_agg: type of temporal agg layer
         '''
-        super(DPOTNet, self).__init__()
+        super(MoEPOTNet, self).__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.in_timesteps = in_timesteps
@@ -281,6 +271,7 @@ class DPOTNet(nn.Module):
         self.normalize = normalize
         self.time_agg = time_agg
         self.n_cls = n_cls
+        self.is_finetune = is_finetune
 
 
         h = img_size // patch_size
@@ -291,7 +282,7 @@ class DPOTNet(nn.Module):
 
         self.blocks = nn.ModuleList([
             Block(mixing_type=mixing_type,modes=modes,
-                width=embed_dim, mlp_ratio=mlp_ratio, channel_first = True, n_blocks=n_blocks,double_skip=False, h=h, w=w,act = act)
+                width=embed_dim, mlp_ratio=mlp_ratio, channel_first = True, n_blocks=n_blocks,double_skip=False, h=h, w=w,act = act,is_finetune=is_finetune)
             for i in range(depth)])
 
 
@@ -362,7 +353,7 @@ class DPOTNet(nn.Module):
 
     ### in/out: B, X, Y, T, C
     def forward(self, x):
-        B, _, _, T, _ = x.shape
+        B, _, _, T, _ = x.shape # [8,128,128,10,1]
         if self.normalize:
             mu, sigma = x.mean(dim=(1,2,3),keepdim=True), x.std(dim=(1,2,3),keepdim=True) + 1e-6    # B,1,1,1,C
             x = (x - mu)/ sigma
@@ -370,13 +361,12 @@ class DPOTNet(nn.Module):
             scale_sigma = self.scale_feats_sigma(torch.cat([mu, sigma], dim=-1)).squeeze(-2).permute(0, 3, 1, 2)
 
 
-        grid = self.get_grid_3d(x)
+        grid = self.get_grid_3d(x) 
         x = torch.cat((x, grid), dim=-1).contiguous() # B, X, Y, T, C+3
         x = rearrange(x, 'b x y t c -> (b t) c x y')
         x = self.patch_embed(x)
-
         x = x + self.pos_embed
-
+         
         x = rearrange(x, '(b t) c x y -> b x y t c', b=B, t=T)
 
         x = self.time_agg_layer(x)
@@ -384,12 +374,12 @@ class DPOTNet(nn.Module):
         x = rearrange(x, 'b x y c -> b c x y')
 
         if self.normalize:
-            x = scale_sigma * x + scale_mu   ### Ada_in layer
-
+            x = scale_sigma * x + scale_mu   ### Ada_in layer 
+        
+        loss_total = 0
         for blk in self.blocks:
-            x = blk(x)
-
-
+            x, loss = blk(x)
+            loss_total += loss
 
         cls_token = x.mean(dim=(2, 3), keepdim=False)
         cls_pred = self.cls_head(cls_token)
@@ -400,7 +390,8 @@ class DPOTNet(nn.Module):
         if self.normalize:
             x = x * sigma  + mu
 
-        return x, cls_pred
+
+        return x, cls_pred ,loss_total
 
     def extra_repr(self) -> str:
 
@@ -460,9 +451,7 @@ def checkpoint_filter_fn(state_dict, model):
 
 
 if __name__ == "__main__":
-    # x = torch.rand(4, 20, 20, 100)
-    # net = AFNO2D(in_timesteps=3, out_timesteps=1, n_channels=2, width=100, num_blocks=5)
     x = torch.rand(4, 20, 20, 6, 3)
-    net = DPOTNet(img_size=20, patch_size=5, in_channels=3, out_channels=3, in_timesteps=6, out_timesteps=1, embed_dim=32,normalize=True)
+    net = MoEPOTNet(img_size=20, patch_size=5, in_channels=3, out_channels=3, in_timesteps=6, out_timesteps=1, embed_dim=32,normalize=True)
     y,_ = net(x)
     print(y.shape)

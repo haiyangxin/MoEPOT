@@ -5,10 +5,11 @@ import random
 import argparse
 import os
 import sys
-
+import torch
 
 class ParallelTrainer:
     def __init__(self, yaml_path):
+        print(os.getcwd())
         self.config = self.load_yaml(yaml_path)
         self.processes = {}  # Store {gpu_id: process} for monitoring
 
@@ -18,19 +19,20 @@ class ParallelTrainer:
             return yaml.safe_load(file)
 
     def get_available_gpus(self):
-        cmd = "nvidia-smi --query-gpu=index,memory.used --format=csv,noheader,nounits"
-        output = subprocess.check_output(cmd, shell=True).decode('utf-8').strip()
-        lines = output.split("\n")
+        # cmd = "nvidia-smi --query-gpu=index,memory.used --format=csv,noheader,nounits"
+        # output = subprocess.check_output(cmd, shell=True).decode('utf-8').strip()
+        # lines = output.split("\n")
 
-        # Extract GPUs with memory usage less than a certain threshold (e.g., 500 MB)
-        free_gpus = [int(line.split(",")[0].strip()) for line in lines if
-                     int(line.split(",")[1].strip().split(" ")[0]) < 800]
+        # # Extract GPUs with memory usage less than a certain threshold (e.g., 500 MB)
+        # free_gpus = [int(line.split(",")[0].strip()) for line in lines if
+        #              int(line.split(",")[1].strip().split(" ")[0]) < 6000]
 
-        # If 'device' is specified in the config, filter the available GPUs
-        if 'device' in self.config:
-            specified_gpus_str = self.config['device']
-            specified_gpus = [int(gpu) for gpu in specified_gpus_str.split(',')]
-            free_gpus = [gpu for gpu in free_gpus if gpu in specified_gpus]
+        # # If 'device' is specified in the config, filter the available GPUs
+        # if 'device' in self.config:
+        #     specified_gpus_str = self.config['device']
+        #     specified_gpus = [int(gpu) for gpu in specified_gpus_str.split(',')]
+        #     free_gpus = [gpu for gpu in free_gpus if gpu in specified_gpus]
+        free_gpus = [0,1] # 先用两张卡进行测试
 
         return free_gpus
 
@@ -51,7 +53,10 @@ class ParallelTrainer:
                 else:
                     base_args.extend([f'--{key}', str(value)])
         for key, value in task_args.items():
-            if isinstance(value, list):
+            if isinstance(value, bool):
+                if value:  # If the value is True, we just add the flag, otherwise we skip it
+                    base_args.append(f'--{key}')
+            elif isinstance(value, list):
                 base_args.append(f'--{key}')
                 for item in value:
                     base_args.append(str(item))
@@ -74,19 +79,15 @@ class ParallelTrainer:
             for gpu_key, process in list(self.processes.items()):
                 ret_code = process.poll()
                 if ret_code is not None:  # Process has finished
-                    print(f"Task on GPUs {', '.join(map(str, gpu_key))} has finished.")  # 更新打印语句以显示所有GPU IDs
+                    print(f"Task on GPUs {', '.join(map(str, gpu_key))} has finished.")
                     del self.processes[gpu_key]
                     return gpu_key
 
             if tasks:  # Only check for available GPUs if there are pending tasks
                 available_gpus = self.get_available_gpus()
-                next_task_num_gpus = tasks[0].get('num_gpus',self.config.get('num_gpus', 1))  # 获取num_gpus值，如果没有指定，则默认为1
-                # next_task_num_gpus = tasks[0]['num_gpus']  # 假设每个任务字典中都有一个'num_gpus'键
+                next_task_num_gpus = tasks[0].get('num_gpus',self.config.get('num_gpus', 1))
                 if len(available_gpus) >= next_task_num_gpus:
                     return available_gpus[:next_task_num_gpus]
-                # free_gpus = [gpu for gpu in available_gpus if gpu not in self.processes.keys()]
-                # if free_gpus:
-                #     return free_gpus[0]
 
             time.sleep(5)
         return None

@@ -1,9 +1,7 @@
 name: NS2d
 file: train_temporal_parallel.py
 
-#model: FNO
 dataset: ns2d
-#num_gpus: 2
 use_writer: True
 res: 128
 modes: 20
@@ -26,43 +24,30 @@ grad_clip: 10000.0
 
 train_paths: [
   'ns2d_fno_1e-5',
-  'ns2d_fno_1e-4',
   'ns2d_fno_1e-3',
-  'ns2d_pdb_M1_eta1e-1_zeta1e-1',
-  'ns2d_pdb_M1_eta1e-2_zeta1e-2',
-  'ns2d_pdb_M1e-1_eta1e-1_zeta1e-1',
   'ns2d_pdb_M1e-1_eta1e-2_zeta1e-2',
   'swe_pdb',
   'dr_pdb',
-  'ns2d_pda',
-  'ns2d_cond_pda',
   'cfdbench'
 ]
 test_paths: [
   'ns2d_fno_1e-5',
-  'ns2d_fno_1e-4',
   'ns2d_fno_1e-3',
-  'ns2d_pdb_M1_eta1e-1_zeta1e-1',
-  'ns2d_pdb_M1_eta1e-2_zeta1e-2',
-  'ns2d_pdb_M1e-1_eta1e-1_zeta1e-1',
   'ns2d_pdb_M1e-1_eta1e-2_zeta1e-2',
   'swe_pdb',
   'dr_pdb',
-  'ns2d_pda',
-  'ns2d_cond_pda',
   'cfdbench'
 ]
-ntrain_list: [1000,9800,1000,9000,9000,9000,9000,900,900,6500,3100,9000]
+ntrain_list: [1000,1000,9000,900,900,9000]
 
 
 
 ############################################################
-########## DPOT for multiple PDE datasets pretraining (Tiny)
+########## MoEPOT for multiple PDE datasets pretraining (Tiny)
 ############################################################
-model: DPOT
-num_gpus: 6
+model: MoEPOT
+num_gpus: 2
 opt: adam
-data_weights: [8,2,8,1,1,1,1,20,20,1,3,1]
 comment: 'Ti'
 tasks:
   normalize: [0]
@@ -83,5 +68,6 @@ tasks:
   beta1: [0.9]
   beta2: [0.9]
   batch_size: [20]
+  moe_loss_weight: [0.1]
 
 

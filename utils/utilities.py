@@ -12,6 +12,7 @@ from collections import OrderedDict
 
 
 
+
 class MultipleTensors(Sequence):
     def __init__(self, x):
         self.x = x
@@ -97,6 +98,7 @@ def count_parameters(model):
 
 
 def load_model_from_checkpoint(model, model_state_dict):
+    # 从保存的字典中导入model参数
     if next(iter(model_state_dict.keys())).startswith('module.'):
         new_state_dict = OrderedDict()
         for key, item in model_state_dict.items():

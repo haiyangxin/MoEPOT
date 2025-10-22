@@ -7,6 +7,7 @@ import torch
 from torch import Tensor
 import numpy as np
 from tqdm import tqdm
+import os
 
 from data_generation.cfdbench.base import CfdDataset, CfdAutoDataset
 from data_generation.cfdbench.utils import load_json, normalize_bc, normalize_physics_props

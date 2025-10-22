@@ -1,5 +1,5 @@
 import yaml
-import subprocess
+import subprocess # Used to start external processes (such as training scripts)
 import time
 import argparse
 import os
@@ -17,30 +17,36 @@ class Trainer:
             return yaml.safe_load(file)
 
     def get_available_gpus(self):
-        cmd = "nvidia-smi --query-gpu=index,memory.used --format=csv,noheader,nounits"
-        output = subprocess.check_output(cmd, shell=True).decode('utf-8').strip()
-        lines = output.split("\n")
+        '''
+        Get the list of available GPUs
+        '''
+        # cmd = "nvidia-smi --query-gpu=index,memory.used --format=csv,noheader,nounits"
+        # output = subprocess.check_output(cmd, shell=True).decode('utf-8').strip()
+        # lines = output.split("\n")
 
-        # Extract GPUs with memory usage less than a certain threshold (e.g., 500 MB)
-        free_gpus = [int(line.split(",")[0].strip()) for line in lines if
-                     int(line.split(",")[1].strip().split(" ")[0]) < 800]
+        # # Extract GPUs with memory usage less than a certain threshold (e.g., 500 MB)
+        # free_gpus = [int(line.split(",")[0].strip()) for line in lines if
+        #              int(line.split(",")[1].strip().split(" ")[0]) < 800]
 
-        # If 'device' is specified in the config, filter the available GPUs
-        if 'device' in self.config:
-            specified_gpus_str = self.config['device']
-            specified_gpus = [int(gpu) for gpu in specified_gpus_str.split(',')]
-            free_gpus = [gpu for gpu in free_gpus if gpu in specified_gpus]
+        # # If 'device' is specified in the config, filter the available GPUs
+        # if 'device' in self.config:
+        #     specified_gpus_str = self.config['device']
+        #     specified_gpus = [int(gpu) for gpu in specified_gpus_str.split(',')]
+        #     free_gpus = [gpu for gpu in free_gpus if gpu in specified_gpus]
+        free_gpus = [0,1] # 先用两张卡进行测试
 
         return free_gpus
 
     def run_task(self, task_args, gpu):
+        # Record the parameters to be passed and run the corresponding program
         python_executable = sys.executable  # This will give the path to the currently running Python interpreter
         base_args = [python_executable, self.config['file']]
+        # The initial list includes the path of the Python interpreter and the files to be run specified in the configuration file (such as training scripts)
 
         # Load all non-task parameters excluding 'name' and 'file'
         for key, value in self.config.items():
             if 'task' not in key and key not in ['name', 'file', 'device']:
-                if isinstance(value, bool):
+                if isinstance(value, bool): # If the value is a boolean
                     if value:  # If the value is True, we just add the flag, otherwise we skip it
                         base_args.append(f'--{key}')
                 elif isinstance(value, list):
@@ -50,7 +56,10 @@ class Trainer:
                 else:
                     base_args.extend([f'--{key}', str(value)])
         for key, value in task_args.items():
-            if isinstance(value, list):
+            if isinstance(value, bool):
+                if value:  # If the value is True, we just add the flag, otherwise we skip it
+                    base_args.append(f'--{key}')
+            elif isinstance(value, list):
                 base_args.append(f'--{key}')
                 for item in value:
                     base_args.append(str(item))
@@ -60,12 +69,16 @@ class Trainer:
 
         log_path = f"{self.config['model']}_{self.config['dataset']}_{time.strftime('%m%d_%H_%M_%S')}"
         base_args.extend(['--log_path', log_path, '--gpu', str(gpu)])
-        # print(f"Starting task with args: {' '.join(base_args)}")
         process = subprocess.Popen(base_args)
         print(f"Task started on GPU {gpu}")
         self.processes[gpu] = process
 
     def monitor_tasks(self, tasks):
+        '''
+        Continuously check the status of running tasks. If a task is completed, return its GPU ID.
+        If there are still tasks to be executed, check the available GPUs and return idle GPUs.
+        
+        '''
         while True:
             for gpu, process in list(self.processes.items()):
                 ret_code = process.poll()
@@ -95,8 +108,10 @@ class Trainer:
             for key, values in task_params.items():
                 if not isinstance(values, list):
                     task_params[key] = [values]
+                    # If the value is not a list, convert it to a list to ensure that all task parameters exist in the form of a list.
                 if n is None:
                     n = len(task_params[key])
+                    # task_params[key] = values
                 elif n != len(task_params[key]):
                     raise ValueError("All parameter sequences in 'tasks' should have the same length.")
 
@@ -111,12 +126,15 @@ class Trainer:
             tasks = [{k: v for k, v in self.config.items() if k not in ['name', 'file', 'device', 'tasks']}]
 
         available_gpus = self.get_available_gpus()
+        # Get the current list of available GPUs
 
         # Start tasks for initially available GPUs
         while tasks and available_gpus:
             task = tasks.pop(0)
+            # Remove the first element from the stack and return it, meaning that the element of the task is missing one
             gpu = available_gpus.pop(0)
             self.run_task(task, gpu)
+            # Run programs on the specified GPU
             time.sleep(20)
 
         # Wait for tasks to finish and start new tasks on free GPUs

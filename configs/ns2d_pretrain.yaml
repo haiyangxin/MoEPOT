@@ -1,14 +1,14 @@
 name: NS2d
 file: train_temporal.py
 
-model: AFNO
+model: MoEPOT
 dataset: ns2d
 use_writer: True
 res: 128
 modes: 20
 width: 32
 lr: 0.001
-lr_method: step
+lr_method: cycle
 step_size: 100
 step_gamma: 0.5
 epochs: 500
@@ -19,43 +19,29 @@ normalize: 0
 T_bundle: 1
 grad_clip: 10000.0
 
-#resume_path: '/root/files/pdessl/logs_pretrain/AFNO_ns2d_1218_17_20_14:S_12_114400/model_99.pth'
 
 
-# PDB 1, 1e-1, 1e-1
 train_paths: [
   'ns2d_fno_1e-5',
-  'ns2d_fno_1e-4',
   'ns2d_fno_1e-3',
-  'ns2d_pdb_M1_eta1e-1_zeta1e-1',
-  'ns2d_pdb_M1_eta1e-2_zeta1e-2',
-  'ns2d_pdb_M1e-1_eta1e-1_zeta1e-1',
   'ns2d_pdb_M1e-1_eta1e-2_zeta1e-2',
   'swe_pdb',
   'dr_pdb',
-  'ns2d_pda',
-  'ns2d_cond_pda',
   'cfdbench'
 ]
 test_paths: [
   'ns2d_fno_1e-5',
-  'ns2d_fno_1e-4',
   'ns2d_fno_1e-3',
-  'ns2d_pdb_M1_eta1e-1_zeta1e-1',
-  'ns2d_pdb_M1_eta1e-2_zeta1e-2',
-  'ns2d_pdb_M1e-1_eta1e-1_zeta1e-1',
   'ns2d_pdb_M1e-1_eta1e-2_zeta1e-2',
   'swe_pdb',
   'dr_pdb',
-  'ns2d_pda',
-  'ns2d_cond_pda',
   'cfdbench'
 ]
-ntrain_list: [1000,8000,1000,9000,9000,9000,9000,900,900,6500,3100,9000]
-data_weights: [8,2,8,1,1,1,1,8,8,1,3,1]
-## AFNO for multiple PDE datasets pretraining
+ntrain_list: [1000,1000,9000,900,900,9000]
+
+## MoEPOT for multiple PDE datasets pretraining
 opt: adam
-comment: 'mlp4t'
+comment: 'Ti' 
 tasks:
   res: [128]
   normalize: [0]
@@ -75,3 +61,5 @@ tasks:
   beta1: [0.9]
   beta2: [0.9]
   batch_size: [32]
+  is_finetune: [False]
+  

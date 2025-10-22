@@ -1,6 +1,8 @@
 import sys
 import os
-sys.path.append(['.','./../'])
+# sys.path.append(['.','./../'])
+sys.path.append('.')    
+sys.path.append('..')
 os.environ['OMP_NUM_THREADS'] = '16'
 
 import json
@@ -16,11 +18,7 @@ from utils.utilities import count_parameters, get_grid, load_model_from_checkpoi
 from utils.criterion import SimpleLpLoss
 from utils.griddataset import MixedTemporalDataset
 from models.fno import FNO2d
-from models.dpot import DPOTNet
-
-# torch.manual_seed(0)
-# np.random.seed(0)
-
+from MoEPOT.models.moepot import MoEPOTNet
 
 
 ################################################################
@@ -31,43 +29,56 @@ from models.dpot import DPOTNet
 parser = argparse.ArgumentParser(description='Training or pretraining for the same data type')
 
 ### currently no influence
-parser.add_argument('--model', type=str, default='AFNO')
+parser.add_argument('--model', type=str, default='MoEPOT')
 parser.add_argument('--dataset',type=str, default='ns2d')
 
-parser.add_argument('--train_paths',nargs='+', type=str, default=['ns2d_pdb_M1_eta1e-1_zeta1e-1'])
-parser.add_argument('--test_paths',nargs='+',type=str, default=['ns2d_fno_1e-5','swe_pdb','dr_pdb'])
-parser.add_argument('--resume_path',type=str, default='/root/files/pdessl/logs_pretrain/AFNO_ns2d_1218_17_20_14:S_12_114400/model_99.pth')
-parser.add_argument('--ntrain_list', nargs='+', type=int, default=[100])
-parser.add_argument('--ntest_list',nargs='+',type=int, default=[100,50,100])
+parser.add_argument('--train_paths',nargs='+', type=str, default=[
+ 'ns2d_fno_1e-5',
+  'ns2d_fno_1e-3',
+  'ns2d_pdb_M1e-1_eta1e-2_zeta1e-2',
+  'swe_pdb',
+  'dr_pdb',
+  'cfdbench'
+])
+parser.add_argument('--test_paths',nargs='+',type=str, default=[
+ 'ns2d_fno_1e-5',
+  'ns2d_fno_1e-3',
+  'ns2d_pdb_M1e-1_eta1e-2_zeta1e-2',
+  'swe_pdb',
+  'dr_pdb',
+  'cfdbench'
+])
+parser.add_argument('--resume_path',type=str, default='./logs_pretrain/checkpoints/model_moepot_tiny.pth')
+parser.add_argument('--ntrain_list', nargs='+', type=int, default=[1000])
+parser.add_argument('--ntest_list',nargs='+',type=int, default=[200]) # It will not be adopted
 parser.add_argument('--data_weights',nargs='+',type=int, default=[1])
 parser.add_argument('--use_writer', action='store_true',default=False)
 
 parser.add_argument('--res', type=int, default=128)
 parser.add_argument('--noise_scale',type=float, default=0.0)
-# parser.add_argument('--n_channels',type=int,default=-1)
 
 ### shared params
-parser.add_argument('--width', type=int, default=1024)
-parser.add_argument('--n_layers',type=int, default=6)
+parser.add_argument('--width', type=int, default=512) # width of model
+parser.add_argument('--n_layers',type=int, default=4) # layer of model
 parser.add_argument('--act',type=str, default='gelu')
 
 ### GNOT params
 parser.add_argument('--max_nodes',type=int, default=-1)
 
 ### FNO params
-parser.add_argument('--modes', type=int, default=20)
+parser.add_argument('--modes', type=int, default=32)
 parser.add_argument('--use_ln',type=int, default=0)
 parser.add_argument('--normalize',type=int, default=0)
 
 
 ### AFNO
 parser.add_argument('--patch_size',type=int, default=8)
-parser.add_argument('--n_blocks',type=int, default=8)
-parser.add_argument('--mlp_ratio',type=int, default=1)
+parser.add_argument('--n_blocks',type=int, default=4)  # blocks of model
+parser.add_argument('--mlp_ratio',type=int, default=1)  # mlp_ratio
 parser.add_argument('--out_layer_dim', type=int, default=32)
 
 
-parser.add_argument('--batch_size', type=int, default=10)
+parser.add_argument('--batch_size', type=int, default=20) # When testing time, should batch_size=1
 parser.add_argument('--epochs', type=int, default=500)
 parser.add_argument('--lr', type=float, default=0.001)
 parser.add_argument('--opt',type=str, default='adam', choices=['adam','lamb'])
@@ -82,14 +93,14 @@ parser.add_argument('--sub', type=int, default=1)
 parser.add_argument('--T_in', type=int, default=10)
 parser.add_argument('--T_ar', type=int, default=1)
 parser.add_argument('--T_bundle', type=int, default=1)
-parser.add_argument('--gpu', type=str, default="3")
+parser.add_argument('--gpu', type=str, default="1")
 parser.add_argument('--comment',type=str, default="")
 parser.add_argument('--log_path',type=str,default='')
 
 
-parser.add_argument('--n_channels',type=int, default=4)
-parser.add_argument('--n_class',type=int,default=12)
-
+parser.add_argument('--n_channels',type=int, default=4)   # max channels in the dataset
+parser.add_argument('--n_class',type=int,default=6)    # Number of datasets
+parser.add_argument('--is_finetune',action='store_true',default=True) # We use the parameters of finetune for evaluation here
 args = parser.parse_args()
 
 
@@ -110,7 +121,7 @@ print('args',args)
 
 
 train_dataset = MixedTemporalDataset(args.train_paths, args.ntrain_list, res=args.res, t_in = args.T_in, t_ar = args.T_ar, normalize=False,train=True, data_weights=args.data_weights, n_channels=args.n_channels)
-test_datasets = [MixedTemporalDataset(test_path, [args.ntest_list[i]], res=args.res, n_channels = train_dataset.n_channels,t_in = args.T_in, t_ar=-1, normalize=False, train=False) for i, test_path in enumerate(test_paths)]
+test_datasets = [MixedTemporalDataset(test_path, res=args.res, n_channels = train_dataset.n_channels,t_in = args.T_in, t_ar=-1, normalize=False, train=False) for i, test_path in enumerate(test_paths)]
 train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=8)
 test_loaders = [torch.utils.data.DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False,num_workers=8) for test_dataset in test_datasets]
 ntrain, ntests = len(train_dataset), [len(test_dataset) for test_dataset in test_datasets]
@@ -118,10 +129,8 @@ print('Train num {} test num {}'.format(train_dataset.n_sizes, ntests))
 ################################################################
 # load model
 ################################################################
-if args.model == "FNO":
-    model = FNO2d(args.modes, args.modes, args.width, img_size = args.res, patch_size=args.patch_size, in_timesteps = args.T_in, out_timesteps=1,normalize=args.normalize,n_layers = args.n_layers,use_ln = args.use_ln, n_channels=train_dataset.n_channels, n_cls=len(args.train_paths)).to(device)
-elif args.model == 'DPOT':
-    model = DPOTNet(img_size=args.res, patch_size=args.patch_size, in_channels=train_dataset.n_channels, in_timesteps = args.T_in, out_timesteps = args.T_bundle, out_channels=train_dataset.n_channels, normalize=args.normalize, embed_dim=args.width, modes=args.modes, depth=args.n_layers, n_blocks = args.n_blocks, mlp_ratio=args.mlp_ratio, out_layer_dim=args.out_layer_dim, act=args.act, n_cls=args.n_class).to(device)
+if args.model == 'MoEPOT':
+    model = MoEPOTNet(img_size=args.res, patch_size=args.patch_size, in_channels=train_dataset.n_channels, in_timesteps = args.T_in, out_timesteps = args.T_bundle, out_channels=train_dataset.n_channels, normalize=args.normalize, embed_dim=args.width, modes=args.modes, depth=args.n_layers, n_blocks = args.n_blocks, mlp_ratio=args.mlp_ratio, out_layer_dim=args.out_layer_dim, act=args.act, n_cls=len(args.train_paths) ,is_finetune=args.is_finetune).to(device)
 else:
     raise NotImplementedError
 
@@ -195,7 +204,7 @@ with torch.no_grad():
                 y = yy[..., t:t + args.T_bundle, :]
 
                 time_i = time.time()
-                im, _ = model(xx)
+                im, _, _ = model(xx)
                 time_test += time.time() - time_i
 
                 loss += myloss(im, y, mask=msk)

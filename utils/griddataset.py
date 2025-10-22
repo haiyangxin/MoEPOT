@@ -25,6 +25,9 @@ from utils.utilities import downsample, resize
 
 
 class MixedTemporalDataset(Dataset):
+    '''
+    Custom processed dataset class for loading datasets
+    '''
     # _num_datasets = 0
     # _num_channels = 0
     def __init__(self, data_names, n_list = None, res = 128,t_in = 10, t_ar = 1, n_channels = None, normalize=False,train=True,data_weights=None):
@@ -39,10 +42,6 @@ class MixedTemporalDataset(Dataset):
         :param normalize: if normalize data,  reversible instance normalization is implemented in each model
         :param train: if it is train dataset or (in distribution) test dataset
         '''
-        # set global configs
-        # if train:
-        #     MixedTemporalDataset._num_datasets = len(data_names)
-        #     MixedTemporalDataset._num_channels = max([DATASET_DICT[name]['n_channels'] for name in data_names])
         self.data_names = data_names if isinstance(data_names, list) else [data_names]
         self.data_weights = data_weights if data_weights is not None else [1] * len(self.data_names)
         self.num_datasets = len(data_names)
@@ -67,14 +66,8 @@ class MixedTemporalDataset(Dataset):
                     return h5py.File(f'{path}/data_{idx}.hdf5', 'r')['data'][:]
                 path = DATASET_DICT[name]['train_path'] if train else DATASET_DICT[name]['test_path']
                 self.data_files.append(partial(open_hdf5_file, path))
-                # if DATASET_DICT[name]['scatter_storage']:
-                #     if train:
-                #         self.data_files.append(lambda x, name=name:h5py.File(DATASET_DICT[name]['train_path'] + '/data_{}.hdf5'.format(x),'r')['data'])
-                #     else:
-                #         self.data_files.append(lambda x, name=name:h5py.File(DATASET_DICT[name]['test_path'] + '/data_{}.hdf5'.format(x),'r')['data'])
             else:
                 self.data_files.append(h5py.File(DATASET_DICT[name]['train_path'] if train else DATASET_DICT[name]['test_path'], 'r'))
-            # self.data_files = [h5py.File(DATASET_DICT[name]['train_path'] if train else DATASET_DICT[name]['test_path'], 'r') for name in self.data_names]
 
 
         self.normalize = normalize
@@ -170,7 +163,7 @@ class MixedTemporalDataset(Dataset):
         if self.downsamples[dataset_idx] != (1, 1):
             x, y = x[::self.downsamples[dataset_idx][0],::self.downsamples[dataset_idx][1]], y[::self.downsamples[dataset_idx][0],::self.downsamples[dataset_idx][1]]
 
-        idx_cls = torch.LongTensor([dataset_idx])   #TODO(hzk): now return relative idx in given datasets, finally we need global idx
+        idx_cls = torch.LongTensor([dataset_idx])
         return x, y, msk, idx_cls
 
 
@@ -180,8 +173,6 @@ class MixedTemporalDataset(Dataset):
 
 
 class MixedMaskedDataset(Dataset):
-    # _num_datasets = 0
-    # _num_channels = 0
     def __init__(self, data_names, n_list = None, res = 128,t_in = 10, t_ar = 1, n_channels = None, normalize=False,train=True,data_weights=None):
         '''
         Dataset class for training pretraining multiple datasets
@@ -222,14 +213,8 @@ class MixedMaskedDataset(Dataset):
                     return h5py.File(f'{path}/data_{idx}.hdf5', 'r')['data'][:]
                 path = DATASET_DICT[name]['train_path'] if train else DATASET_DICT[name]['test_path']
                 self.data_files.append(partial(open_hdf5_file, path))
-                # if DATASET_DICT[name]['scatter_storage']:
-                #     if train:
-                #         self.data_files.append(lambda x, name=name:h5py.File(DATASET_DICT[name]['train_path'] + '/data_{}.hdf5'.format(x),'r')['data'])
-                #     else:
-                #         self.data_files.append(lambda x, name=name:h5py.File(DATASET_DICT[name]['test_path'] + '/data_{}.hdf5'.format(x),'r')['data'])
             else:
                 self.data_files.append(h5py.File(DATASET_DICT[name]['train_path'] if train else DATASET_DICT[name]['test_path'], 'r'))
-            # self.data_files = [h5py.File(DATASET_DICT[name]['train_path'] if train else DATASET_DICT[name]['test_path'], 'r') for name in self.data_names]
 
 
         self.normalize = normalize
@@ -562,287 +547,3 @@ class TemporalDataset3D(Dataset):
 
     def __len__(self):
         return self.n_size
-
-#
-# def load_dataset(path):
-#     '''
-#     Auxiliary function for reading dataset
-#     :param path:
-#     :return:
-#     '''
-#     if path.endswith('.pkl'):
-#         data = pickle.load(open(path, 'rb'))
-#     elif path.endswith('.npy') or path.endswith('.npz'):
-#         fp = np.load(path)
-#         x = fp['x']
-#         y = fp['y']
-#         theta = None if fp['theta'].ndim == 0 else fp['theta']
-#         data = {'x': x, 'y': y, 'theta': theta}
-#     elif path.endswith('.hdf5'):
-#         with h5py.File(path, 'r') as fp:
-#             x = np.array(fp['x'],dtype=np.float32)
-#             y = np.array(fp['y'],dtype=np.float32)
-#             theta = None if fp['theta'].ndim == 0 else np.array(fp['theta'],dtype=np.float32)
-#             data = {'x': x, 'y': y, 'theta': theta}
-#     else:
-#         raise ValueError
-#     return data
-
-
-# class GridDataset(Dataset):
-#     def __init__(self, name, data=None, data_index=None, downsample_x=(0,), downsample_y=(0,)):
-#         super(GridDataset, self).__init__()
-#
-#         if name not in DATASET_DICT.keys():
-#             raise NotImplementedError
-#
-#         self.meta_info = DATASET_DICT[name]
-#         self.downsample_x = downsample_x if downsample_x[0] else self.meta_info['default_downsample_x']
-#         self.downsample_y = downsample_y if downsample_y[0] else self.meta_info['default_downsample_y']
-#         self.scattered_storage =  ('scatter_stored' in self.meta_info.keys()) and self.meta_info['scatter_stored']
-#         self.enable_grid = False
-#
-#         ### process dataset, initialize attributes
-#         if self.scattered_storage:
-#             self.data_index = list(data_index)
-#             self.path_str = self.meta_info['path']
-#
-#             ### get shapes
-#             x0, y0, theta0 = self.__getitem__(0)
-#
-#             self.gridsize_x = x0.shape[:-2] if self.meta_info['temporal'] else x0.shape[:-1]
-#             self.gridsize_y = y0.shape[:-2] if self.meta_info['temporal'] else y0.shape[:-1]
-#
-#
-#
-#         else:
-#             if data is None:
-#                 data = load_dataset(self.meta_info['path'])
-#
-#             self.x, self.y = torch.from_numpy(data['x']), torch.from_numpy(data['y'])
-#             self.theta = None if data['theta'] == None else torch.from_numpy(data['theta'])
-#
-#             #### downsample
-#             self.x = self.__downsample(self.downsample_x, attr_name='x')
-#             self.y = self.__downsample(self.downsample_y, attr_name='y')
-#
-#             self.gridsize_x = self.x.shape[1:-2] if self.meta_info['temporal'] else self.x.shape[1:-1]
-#             self.gridsize_y = self.y.shape[1:-2] if self.meta_info['temporal'] else self.y.shape[1:-1]
-#
-#
-#
-#
-#
-#     def __len__(self):
-#         if self.scattered_storage:
-#             return len(self.data_index)
-#         else:
-#             return self.x.shape[0]
-#
-#     def __getitem__(self, idx):
-#         if self.scattered_storage:
-#             data = np.load(os.path.join(self.path_str,'data_{}.npz'.format(self.data_index[idx])))
-#             x, y = torch.from_numpy(data['x']).unsqueeze(0), torch.from_numpy(data['y']).unsqueeze(0)
-#             if hasattr(self, 'x_normalizer'):
-#                 x, y = self.x_normalizer.transform(x, inverse=False), self.y_normalizer.transform(y, inverse=False)
-#             x, y = self.__downsample(self.downsample_x, data=x), self.__downsample(self.downsample_y, data=y)
-#             if self.enable_grid:
-#                 x = self.auto_load_grid(data=x)
-#             if self.meta_info['theta_dim'] == 0:
-#                 theta = torch.zeros([])
-#             else:
-#                 theta = self.theta_normalizer.transform(torch.from_numpy(data['theta']).unsqueeze(0),inverse=False).squeeze(0)
-#             return x.squeeze(0), y.squeeze(0), theta
-#         else:
-#             if self.theta is None:
-#                 return self.x[idx], self.y[idx], torch.zeros([])
-#             else:
-#                 return self.x[idx], self.y[idx], self.theta[idx]
-#
-#
-#
-#
-#     #### downscale dataset, support up to 4 dim, must pass either attr_name or data
-#     def __downsample(self, downsample, data=None, attr_name=None):
-#         if data is None:
-#             if attr_name is not None:
-#                 data = getattr(self, attr_name)
-#             else:
-#                 raise ValueError
-#         downsample = downsample * self.meta_info['space_dim'] if isinstance(downsample, list) and len(downsample)==1 else downsample
-#         if self.meta_info['space_dim'] == 1:
-#             if isinstance(downsample, int):
-#                 data = data[:,::downsample]
-#             else:
-#                 data = data[:,::downsample[0]]
-#         elif self.meta_info['space_dim'] == 2:
-#             if isinstance(downsample, int):
-#                 data = data[:,::downsample, ::downsample]
-#             else:
-#                 data = data[:,::downsample[0],::downsample[1]]
-#         elif self.meta_info['space_dim'] == 3:
-#             if isinstance(downsample, int):
-#                 data = data[:, ::downsample, ::downsample,:: downsample]
-#             else:
-#                 data = data[:, ::downsample[0], ::downsample[1], ::downsample[2]]
-#         elif self.meta_info['space_dim'] == 4:
-#             if isinstance(downsample, int):
-#                 data = data[:, ::downsample, ::downsample, :: downsample, :: downsample]
-#             else:
-#                 data = data[:, ::downsample[0], ::downsample[1], ::downsample[2], ::downsample[3]]
-#         else:
-#             raise ValueError
-#
-#
-#         if attr_name=='x':
-#             self.x = data
-#         elif attr_name == 'y':
-#             self.y = data
-#
-#         return data
-#
-#     def get_normalizer(self, type):
-#
-#         # restore from file
-#         if self.scattered_storage:
-#             normalizer_data = np.load(os.path.join(self.path_str, 'normalizer_data.npz'))
-#             if type == 'unit':
-#                 x1, x2, y1, y2, t1, t2 = normalizer_data['unit_mean_x'], normalizer_data['unit_std_x'], normalizer_data['unit_mean_y'], normalizer_data['unit_std_y'], normalizer_data['unit_mean_theta'], normalizer_data['unit_std_theta']
-#             elif type == 'pointunit':
-#                 x1, x2, y1, y2, t1, t2 = normalizer_data['pointunit_mean_x'], normalizer_data['pointunit_std_x'], normalizer_data['pointunit_mean_y'], normalizer_data['pointunit_std_y'], normalizer_data['pointunit_mean_theta'], normalizer_data['pointunit_std_theta']
-#             elif type == 'minmax':
-#                 x1, x2, y1, y2, t1, t2 = normalizer_data['minmax_min_x'], normalizer_data['minmax_max_x'], normalizer_data['minmax_min_y'], normalizer_data['minmax_max_y'], normalizer_data['minmax_min_theta'], normalizer_data['minmax_max_theta']
-#             else:
-#                 x1, x2, y1, y2, t1, t2 = None, None, None, None, None, None
-#             self.x_normalizer, self.y_normalizer = init_normalizer(type, x1, x2, eps=1e-7), init_normalizer(type, y1, y2, eps=1e-7)
-#             self.theta_normalizer = init_normalizer(type, t1, t2, eps=1e-7) if self.meta_info['theta_dim'] else None
-#
-#
-#         else:
-#             if type in ['unit', 'pointunit','minmax','none']:
-#                 if type == 'unit':
-#                     normalizer = UnitTransformer
-#                 elif type == 'pointunit':
-#                     normalizer = partial(PointWiseUnitTransformer, temporal=self.meta_info['temporal'])
-#                 elif type == 'minmax':
-#                     normalizer = MinMaxTransformer
-#                 else:
-#                     normalizer = IdentityTransformer
-#
-#
-#                 self.x_normalizer = normalizer(self.x, eps=1e-7)
-#                 self.y_normalizer = normalizer(self.y, eps=1e-7)
-#                 self.theta_normalizer = None if self.theta is None else normalizer(self.theta, eps=1e-7)
-#             # elif type == 'quantile':
-#             #
-#             #     x_normalizer_numpy = QuantileTransformer(output_distribution='normal')
-#             #     x_normalizer_numpy = x_normalizer_numpy.fit(self.x.reshape(-1, self.x.shape[-1]))
-#             #     x_normalizer = TorchQuantileTransformer(x_normalizer_numpy.output_distribution, x_normalizer_numpy.references_, x_normalizer_numpy.quantiles_)
-#             #
-#             #     y_normalizer_numpy = QuantileTransformer(output_distribution='normal')
-#             #     y_normalizer_numpy = y_normalizer_numpy.fit(self.y.reshape(-1, self.x.shape[-1]))
-#             #     y_normalizer = TorchQuantileTransformer(y_normalizer_numpy.output_distribution, y_normalizer_numpy.references_, y_normalizer_numpy.quantiles_)
-#             #
-#             #     if self.theta is not None:
-#             #         theta_normalizer_numpy = QuantileTransformer(output_distribution='normal')
-#             #         theta_normalizer_numpy = theta_normalizer_numpy.fit(self.theta.reshape(-1, self.theta.shape[-1]))
-#             #         theta_normalizer = TorchQuantileTransformer(theta_normalizer_numpy.output_distribution, theta_normalizer_numpy.references_, theta_normalizer_numpy.quantiles_)
-#             #     else:
-#             #         theta_normalizer = None
-#             else:
-#                 raise NotImplementedError
-#
-#         return self.x_normalizer, self.y_normalizer, self.theta_normalizer
-#
-#     def apply_normalizer(self, x_normalizer=None, y_normalizer=None, theta_normalizer=None):
-#         if x_normalizer is not None:
-#             self.x_normalizer = x_normalizer
-#             if not self.scattered_storage:
-#                 self.x = x_normalizer.transform(self.x, inverse=False)
-#         if y_normalizer is not None:
-#             self.y_normalizer = y_normalizer
-#             if not self.scattered_storage:
-#                 self.y = y_normalizer.transform(self.y, inverse=False)
-#         if theta_normalizer is not None:
-#             self.theta_normalizer = theta_normalizer
-#             if not self.scattered_storage:
-#                 self.theta = theta_normalizer.transform(self.theta, inverse=False)
-#         return
-#
-#     @staticmethod
-#     def get_splits(meta_info):
-#         all_ids = list(range(meta_info['size']))
-#         train_num, valid_num, test_num = meta_info['split']
-#         return all_ids[:train_num],  all_ids[train_num+test_num:], all_ids[train_num:train_num+test_num]
-#
-#     ###
-#     ### assume datatype torch, assert grid before x
-#     def auto_load_grid(self, data=None):
-#         if data is None:
-#             if self.scattered_storage:
-#                 self.enable_grid = True
-#                 return
-#             else:
-#                 set_globally = True
-#                 data = self.x
-#         else:
-#             set_globally = False
-#         space_dim = self.meta_info['space_dim']
-#         if space_dim == 1:
-#             grid = torch.meshgrid(torch.linspace(0, 1, data.shape[1]))
-#             grid = torch.unsqueeze(grid[0], dim=-1)
-#         elif space_dim == 2:
-#             grid = torch.meshgrid(torch.linspace(0, 1, data.shape[1]), torch.linspace(0, 1, data.shape[2]))
-#             grid = torch.stack(grid, dim=-1)
-#         elif space_dim == 3:
-#             grid = torch.meshgrid(torch.linspace(0, 1, data.shape[1]), torch.linspace(0, 1, data.shape[2]),torch.linspace(0,1, data.shape[3]))
-#             grid = torch.stack(grid, dim=-1)
-#         elif space_dim == 4:
-#             grid = torch.meshgrid(torch.linspace(0, 1, data.shape[1]), torch.linspace(0, 1, data.shape[2]),torch.linspace(0,1, data.shape[3]),torch.linspace(0,1, data.shape[4]))
-#             grid = torch.stack(grid, dim=-1)
-#         else:
-#             raise ValueError('dim should be 1, 2, 3 or 4.')
-#         if self.meta_info['temporal']:
-#             grid = grid.unsqueeze(-2)
-#             data = torch.cat([torch.tile(grid.unsqueeze(0),[data.shape[0]] + [1] * space_dim + [data.shape[-2], 1]), data],dim=-1)
-#         else:
-#             data = torch.cat([torch.tile(grid.unsqueeze(0),[data.shape[0]] + [1] * grid.ndim), data],dim=-1)
-#         if set_globally:
-#             self.x = data
-#         return data
-#
-
-
-
-
-# class GridSubDataset(GridDataset):
-#     r"""
-#     Subset of a dataset at specified indices.
-#
-#     Args:
-#         dataset (Dataset): The whole Dataset
-#         indices (sequence): Indices in the whole set selected for subset
-#     """
-#
-#     def __init__(self, dataset: GridDataset, indices: Sequence):
-#         self.dataset = dataset
-#         self.indices = indices
-#
-#         ### set status variables
-#         self.meta_info = self.dataset.meta_info
-#         self.downsample_x = self.dataset.downsample_x
-#         self.downsample_y = self.dataset.downsample_y
-#         self.gridsize_x = self.dataset.gridsize_x
-#         self.gridsize_y = self.dataset.gridsize_y
-#
-#         self.x = self.dataset.x[self.indices]
-#         self.y = self.dataset.y[self.indices]
-#         self.theta = self.dataset.theta[self.indices] if self.dataset.theta is not None else None
-#
-#
-#
-#     def __getitem__(self, idx):
-#         return self.x[idx], self.y[idx], self.theta[idx] if self.theta is not None else torch.zeros([])
-#
-#     def __len__(self):
-#         return len(self.indices)

@@ -1,12 +1,14 @@
 import sys
 import os
-sys.path.append(['.','./../'])
-os.environ['OMP_NUM_THREADS'] = '16'
+sys.path.append('.')       
+sys.path.append('..')     
+os.environ['OMP_NUM_THREADS'] = '16' 
 
 import json
 import time
 import argparse
 import torch
+import torch.utils.data
 import numpy as np
 import torch.nn as nn
 
@@ -16,14 +18,12 @@ from timeit import default_timer
 from torch.optim.lr_scheduler import OneCycleLR, StepLR, LambdaLR, CosineAnnealingWarmRestarts, CyclicLR
 from torch.utils.tensorboard import SummaryWriter
 from utils.optimizer import Adam, Lamb
-from utils.utilities import count_parameters, get_grid, load_model_from_checkpoint
+from utils.utilities import count_parameters, load_model_from_checkpoint
 from utils.criterion import SimpleLpLoss
 from utils.griddataset import MixedTemporalDataset
 from utils.make_master_file import DATASET_DICT
 from models.fno import FNO2d
-from models.dpot import DPOTNet
-from models.dpot_res import CDPOTNet
-import pickle
+from MoEPOT.models.moepot import MoEPOTNet
 
 
 
@@ -35,24 +35,24 @@ import pickle
 
 parser = argparse.ArgumentParser(description='Training or pretraining on multiple PDE datasets')
 
-parser.add_argument('--model', type=str, default='DPOT')
+parser.add_argument('--model', type=str, default='MoEPOT')
 parser.add_argument('--dataset',type=str, default='ns2d')
 
-parser.add_argument('--train_paths',nargs='+', type=str, default=['ns2d_fno_1e-5','ns2d_pdb_M1_eta1e-1_zeta1e-1'])
-parser.add_argument('--test_paths',nargs='+',type=str, default=['ns2d_pdb_M1_eta1e-1_zeta1e-1'])
+parser.add_argument('--train_paths',nargs='+', type=str, default=['ns2d_fno_1e-5','ns2d_fno_1e-3'])
+parser.add_argument('--test_paths',nargs='+',type=str, default=['ns2d_fno_1e-5','ns2d_fno_1e-3'])
 parser.add_argument('--resume_path',type=str, default='')
-parser.add_argument('--ntrain_list', nargs='+', type=int, default=[1000, 5000])
-parser.add_argument('--data_weights',nargs='+',type=int, default=[1])
-parser.add_argument('--use_writer', action='store_true',default=False)
+parser.add_argument('--ntrain_list', nargs='+', type=int, default=[900,900])
+parser.add_argument('--data_weights',nargs='+',type=int, default=[1,1])
+parser.add_argument('--use_writer', action='store_true',default=False) # Control whether to save files
 
 parser.add_argument('--res', type=int, default=128)
 parser.add_argument('--noise_scale',type=float, default=0.0)
-# parser.add_argument('--n_channels',type=int,default=-1)
 
 ### shared params
 parser.add_argument('--width', type=int, default=512)
 parser.add_argument('--n_layers',type=int, default=4)
 parser.add_argument('--act',type=str, default='gelu')
+parser.add_argument('--moe_loss_weight',type=float, default=0.1)
 
 
 ### FNO params
@@ -61,14 +61,13 @@ parser.add_argument('--use_ln',type=int, default=0)
 parser.add_argument('--normalize',type=int, default=0)
 
 
-### DPOT
 parser.add_argument('--patch_size',type=int, default=8)
 parser.add_argument('--n_blocks',type=int, default=8)
 parser.add_argument('--mlp_ratio',type=int, default=1)
 parser.add_argument('--out_layer_dim', type=int, default=32)
 
 parser.add_argument('--batch_size', type=int, default=20)
-parser.add_argument('--epochs', type=int, default=500)
+parser.add_argument('--epochs', type=int, default=1000)
 parser.add_argument('--lr', type=float, default=0.001)
 parser.add_argument('--opt',type=str, default='adam', choices=['adam','lamb'])
 parser.add_argument('--beta1',type=float,default=0.9)
@@ -77,18 +76,19 @@ parser.add_argument('--lr_method',type=str, default='cycle')
 parser.add_argument('--grad_clip',type=float, default=10000.0)
 parser.add_argument('--step_size', type=int, default=100)
 parser.add_argument('--step_gamma', type=float, default=0.5)
-parser.add_argument('--warmup_epochs',type=int, default=100)
+parser.add_argument('--warmup_epochs',type=int, default=200)
 parser.add_argument('--T_in', type=int, default=10)
 parser.add_argument('--T_ar', type=int, default=1)
 parser.add_argument('--T_bundle', type=int, default=1)
-parser.add_argument('--gpu', type=str, default="5")
+parser.add_argument('--gpu', type=str, default="0")
+
 parser.add_argument('--comment',type=str, default="")
 parser.add_argument('--log_path',type=str,default='')
+parser.add_argument('--is_finetune',action='store_true',default=False) # Used to determine whether it is in the finetune stage
 args = parser.parse_args()
 
 
 device = torch.device("cuda:{}".format(args.gpu))
-
 print(f"Current working directory: {os.getcwd()}")
 
 
@@ -108,28 +108,27 @@ test_datasets = [MixedTemporalDataset(test_path, res=args.res, n_channels = trai
 train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=8)
 test_loaders = [torch.utils.data.DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False,num_workers=8) for test_dataset in test_datasets]
 ntrain, ntests = len(train_dataset), [len(test_dataset) for test_dataset in test_datasets]
+# Returns the total number of samples
 print('Train num {} test num {}'.format(train_dataset.n_sizes, ntests))
+# Print training and test set sizes
 ################################################################
 # load model
 ################################################################
-if args.model == "FNO":
-    model = FNO2d(args.modes, args.modes, args.width, img_size = args.res, patch_size=args.patch_size, in_timesteps = args.T_in, out_timesteps=1,normalize=args.normalize,n_layers = args.n_layers,use_ln = args.use_ln, n_channels=train_dataset.n_channels, n_cls=len(args.train_paths)).to(device)
-elif args.model == 'DPOT':
-    model = DPOTNet(img_size=args.res, patch_size=args.patch_size, in_channels=train_dataset.n_channels, in_timesteps = args.T_in, out_timesteps = args.T_bundle, out_channels=train_dataset.n_channels, normalize=args.normalize, embed_dim=args.width, modes=args.modes, depth=args.n_layers, n_blocks = args.n_blocks, mlp_ratio=args.mlp_ratio, out_layer_dim=args.out_layer_dim, act=args.act, n_cls=len(args.train_paths)).to(device)
-elif args.model == 'CDPOT':
-    model = CDPOTNet(img_size=args.res, patch_size=args.patch_size, in_channels=train_dataset.n_channels, in_timesteps = args.T_in, out_timesteps = args.T_bundle, out_channels=train_dataset.n_channels, normalize=args.normalize, embed_dim=args.width, modes=args.modes, depth=args.n_layers, n_blocks = args.n_blocks, mlp_ratio=args.mlp_ratio, out_layer_dim=args.out_layer_dim, act=args.act, n_cls=len(args.train_paths)).to(device)
-
+if args.model == 'MoEPOT':
+    model = MoEPOTNet(img_size=args.res, patch_size=args.patch_size, in_channels=train_dataset.n_channels, in_timesteps = args.T_in, out_timesteps = args.T_bundle, out_channels=train_dataset.n_channels, normalize=args.normalize, embed_dim=args.width, modes=args.modes, depth=args.n_layers, n_blocks = args.n_blocks, mlp_ratio=args.mlp_ratio, out_layer_dim=args.out_layer_dim, act=args.act, n_cls=len(args.train_paths) ,is_finetune=args.is_finetune).to(device)
 else:
     raise NotImplementedError
 
 if args.resume_path:
+    # Notify user that model is being loaded from specified path for fine-tuning, no need to retrain
     print('Loading models and fine tune from {}'.format(args.resume_path))
     args.resume_path = args.resume_path
     load_model_from_checkpoint(model, torch.load(args.resume_path,map_location='cuda:{}'.format(args.gpu))['model'])
-
+    # Extract model information at the end
 
 #### set optimizer
 if args.opt == 'lamb':
+    # Lamb is suitable for large models, while Adam is a widely used optimizer
     optimizer = Lamb(model.parameters(), lr=args.lr, betas = (args.beta1, args.beta2), adam=True, debias=False,weight_decay=1e-4)
 else:
     optimizer = Adam(model.parameters(), lr=args.lr, betas=(args.beta1, args.beta2), weight_decay=1e-6)
@@ -156,9 +155,11 @@ else:
     raise NotImplementedError
 
 comment = args.comment + '_{}_{}'.format(len(train_paths), ntrain)
-log_path = './logs/' + time.strftime('%m%d_%H_%M_%S') + comment if len(args.log_path)==0  else os.path.join('./logs',args.log_path + comment)
+log_path = 'logs_pretrain/' + time.strftime('%m%d_%H_%M_%S') + comment if len(args.log_path)==0  else os.path.join('logs_pretrain',args.log_path + comment)
 model_path = log_path + '/model.pth'
+# This line defines the path to save the model as model.pth file
 if args.use_writer:
+    # Whether to enable Tensorboard
     writer = SummaryWriter(log_dir=log_path)
     fp = open(log_path + '/logs.txt', 'w+',buffering=1)
     json.dump(vars(args), open(log_path + '/params.json', 'w'),indent=4)
@@ -190,7 +191,7 @@ for ep in range(args.epochs):
         t_load += default_timer() - t_1
         t_1 = default_timer()
 
-        loss, cls_loss = 0. , 0.
+        loss, cls_loss ,loss_gate_total = 0. , 0. ,0.
         xx = xx.to(device)  ## B, n, n, T_in, C
         yy = yy.to(device)  ## B, n, n, T_ar, C
         msk = msk.to(device)
@@ -203,8 +204,9 @@ for ep in range(args.epochs):
 
             ### auto-regressive training
             xx = xx + args.noise_scale *torch.sum(xx**2, dim=(1,2,3),keepdim=True)**0.5 * torch.randn_like(xx)
-            im, cls_pred = model(xx)
+            im, cls_pred,loss_gate = model(xx)  # Added loss_gate
             loss += myloss(im, y, mask=msk)
+            loss_gate_total += loss_gate*args.moe_loss_weight
 
             ### classification
             pred_labels = torch.argmax(cls_pred,dim=1)
@@ -223,7 +225,7 @@ for ep in range(args.epochs):
         train_l2_full += l2_full.item()
 
         optimizer.zero_grad()
-        total_loss = loss  # + 1.0 * cls_loss
+        total_loss = loss + loss_gate_total # Introducing the loss function of MoE
         total_loss.backward()
         nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
         optimizer.step()
@@ -261,9 +263,9 @@ for ep in range(args.epochs):
                 msk = msk.to(device)
 
 
-                for t in range(0, yy.shape[-2], args.T_bundle):
+                for t in range(0, yy.shape[-2], args.T_bundle):  # [0,10,1], predict one step at a time
                     y = yy[..., t:t + args.T_bundle, :]
-                    im, _ = model(xx)
+                    im, _, _ = model(xx) # Do not calculate the loss function of MoE during evaluation
                     loss += myloss(im, y, mask=msk)
 
                     if t == 0:
@@ -285,6 +287,7 @@ for ep in range(args.epochs):
 
     if args.use_writer:
         torch.save({'args': args, 'model': model.state_dict(), 'optimizer': optimizer.state_dict()}, model_path)
+        # When Tensorboard is enabled, model parameters will be saved
 
     t_test = default_timer() - t_1
     t2 = t_1 = default_timer()

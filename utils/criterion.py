@@ -38,7 +38,7 @@ class SimpleLpLoss(_WeightedLoss):
     def forward(self, x, y, mask=None):
         num_examples = x.size()[0]
 
-        # Lp loss 1
+        # Lp loss 2
         if mask is not None:##TODO: will be meaned by n_channels for single channel data
             x = x * mask
             y = y * mask
@@ -51,7 +51,6 @@ class SimpleLpLoss(_WeightedLoss):
 
         diff_norms = torch.norm(x.reshape(num_examples,-1, x.shape[-1]) - y.reshape(num_examples,-1,x.shape[-1]), self.p, dim=1)    ##N, C
         y_norms = torch.norm(y.reshape(num_examples,-1, y.shape[-1]), self.p, dim=1) + 1e-8
-
         if self.reduction:
             if self.size_average:
                     return torch.mean(diff_norms/y_norms)          ## deprecated
@@ -59,14 +58,6 @@ class SimpleLpLoss(_WeightedLoss):
                 return torch.sum(torch.sum(diff_norms/y_norms, dim=-1) / msk_channels)    #### go this branch
         else:
             return torch.sum(diff_norms/y_norms, dim=-1) / msk_channels
-        ## Lp loss 2, channel average
-        # diff_norms = torch.norm(x.reshape(num_examples, -1, x.shape[-1]) - y.reshape(num_examples, -1, x.shape[-1]),self.p, 1)
-        # y_norms = torch.norm(y.reshape(num_examples, -1, x.shape[-1]), self.p, 1)
-        # if self.reduction:
-        #     if self.size_average:
-        #         return torch.mean(diff_norms / y_norms)
-        #     else:
-        #         return torch.sum(torch.mean(diff_norms / y_norms,dim=1))  #### go this branch
         if self.return_comps:
             if self.size_average:
                 return torch.mean(diff_norms/y_norms,dim=0)
@@ -342,21 +333,6 @@ def compute_fourier_error(pred, target, iLow, iHigh, if_mean=False):
     fmse_low = torch.mean(_err_F[:, :iLow], dim=1).T  # low freq
     fmse_mid = torch.mean(_err_F[:, iLow:iHigh], dim=1).T  # middle freq
     fmse_high = torch.mean(_err_F[:, iHigh:], dim=1).T
-
-    # err_F = torch.zeros([nc, 3, nt]).to(pred.device)
-    # err_F[:, 0] += torch.mean(_err_F[:, :iLow], dim=1)  # low freq
-    # err_F[:, 1] += torch.mean(_err_F[:, iLow:iHigh], dim=1)  # middle freq
-    # err_F[:, 2] += torch.mean(_err_F[:, iHigh:], dim=1)  # high freq
-
-    # if if_mean:
-    #     return torch.mean(err_RMSE, dim=[0, -1]), \
-    #            torch.mean(err_nRMSE, dim=[0, -1]), \
-    #            torch.mean(err_CSV, dim=[0, -1]), \
-    #            torch.mean(err_Max, dim=[0, -1]), \
-    #            torch.mean(err_BD, dim=[0, -1]), \
-    #            torch.mean(err_F, dim=[0, -1])
-    # else:
-    #     return err_RMSE, err_nRMSE, err_CSV, err_Max, err_BD, err_F
     return err_BD, fmse_low, fmse_mid, fmse_high    ## T, C, ### T, C
 
 
@@ -370,5 +346,3 @@ if __name__ == "__main__":
     evaluator = Evaluator(temporal=True, griddata=True, component='all', normalizer=None)
     metrics = evaluator(x, y)
     print(metrics)
-    # for key, value in metrics.items():
-    #     print(key, value.shape)

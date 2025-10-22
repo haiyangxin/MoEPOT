@@ -1,6 +1,8 @@
 import sys
 import os
-sys.path.append(['.','./../'])
+# sys.path.append(['.','./../'])
+sys.path.append('.')       
+sys.path.append('..')
 os.environ ['OMP_NUM_THREADS'] = '16'
 
 import json
@@ -21,8 +23,7 @@ from utils.criterion import SimpleLpLoss
 from utils.griddataset import MixedTemporalDataset
 from utils.make_master_file import DATASET_DICT
 from models.fno import FNO2d
-from models.dpot import DPOTNet
-from models.dpot_res import CDPOTNet
+from MoEPOT.models.moepot import MoEPOTNet
 
 
 
@@ -56,7 +57,7 @@ def get_args():
     parser.add_argument('--width', type=int, default=32)
     parser.add_argument('--n_layers',type=int, default=4)
     parser.add_argument('--act',type=str, default='gelu')
-
+    parser.add_argument('--moe_loss_weight',type=float, default=0.1)
 
     ### FNO params
     parser.add_argument('--modes', type=int, default=16)
@@ -85,12 +86,10 @@ def get_args():
     parser.add_argument('--S', type=int, default=64)
     parser.add_argument('--T_in', type=int, default=10)
     parser.add_argument('--T_ar', type=int, default=1)
-    # parser.add_argument('--T_ar_test', type=int, default=10)
     parser.add_argument('--T_bundle', type=int, default=1)
-    # parser.add_argument('--T', type=int, default=20)
-    # parser.add_argument('--step', type=int, default=1)
     parser.add_argument('--comment',type=str, default="")
     parser.add_argument('--log_path',type=str,default='')
+    parser.add_argument('--is_finetune',action='store_true',default=False)
     args = parser.parse_args()
     return args
 
@@ -124,18 +123,13 @@ if __name__ == "__main__":
     ################################################################
     # load model
     ################################################################
-    if args.model == "FNO":
-        model = FNO2d(args.modes, args.modes, args.width, img_size = args.res, patch_size=args.patch_size, in_timesteps = args.T_in, out_timesteps=1,normalize=args.normalize,n_layers = args.n_layers,use_ln = args.use_ln, n_channels=train_dataset.n_channels, n_cls=len(args.train_paths)).to(device)
-    elif args.model == 'DPOT':
-        model = DPOTNet(img_size=args.res, patch_size=args.patch_size, in_channels=train_dataset.n_channels, in_timesteps = args.T_in, out_timesteps = args.T_bundle, out_channels=train_dataset.n_channels, normalize=args.normalize, embed_dim=args.width, depth=args.n_layers, n_blocks = args.n_blocks, mlp_ratio=args.mlp_ratio, out_layer_dim=args.out_layer_dim, act=args.act, n_cls=len(args.train_paths)).to(device)
-    elif args.model == 'CDPOT':
-        model = CDPOTNet(img_size=args.res, patch_size=args.patch_size, in_channels=train_dataset.n_channels,in_timesteps=args.T_in, out_timesteps=args.T_bundle, out_channels=train_dataset.n_channels,normalize=args.normalize, embed_dim=args.width, modes=args.modes, depth=args.n_layers,n_blocks=args.n_blocks, mlp_ratio=args.mlp_ratio, out_layer_dim=args.out_layer_dim,act=args.act, n_cls=len(args.train_paths)).to(device)
+    if args.model == 'MoEPOT':
+        model = MoEPOTNet(img_size=args.res, patch_size=args.patch_size, in_channels=train_dataset.n_channels, in_timesteps = args.T_in, out_timesteps = args.T_bundle, out_channels=train_dataset.n_channels, normalize=args.normalize, embed_dim=args.width, depth=args.n_layers, n_blocks = args.n_blocks, mlp_ratio=args.mlp_ratio, out_layer_dim=args.out_layer_dim, act=args.act, n_cls=len(args.train_paths), is_finetune=args.is_finetune).to(device)
     else:
         raise NotImplementedError
 
     if args.resume_path:
         print('Loading models and fine tune from {}'.format(args.resume_path))
-        # model.load_state_dict(torch.load(args.resume_path,map_location='cuda:{}'.format(args.gpu))['model'])
         load_model_from_checkpoint(model, torch.load(args.resume_path, map_location='cpu')['model'])
 
     #### set optimizer
@@ -166,7 +160,7 @@ if __name__ == "__main__":
         raise NotImplementedError
 
     comment = args.comment + '_{}_{}'.format(len(train_paths), ntrain)
-    log_path = './logs_pretrain/' + time.strftime('%m%d_%H_%M_%S') + comment if len(args.log_path)==0  else os.path.join('./logs_pretrain',args.log_path + comment)
+    log_path = 'logs_pretrain/' + time.strftime('%m%d_%H_%M_%S') + comment if len(args.log_path)==0  else os.path.join('logs_pretrain',args.log_path + comment)
     model_path_fun = lambda epoch: (log_path + '/model_{}.pth'.format(epoch))
     ckpt_save_epochs = 50
     if args.use_writer:
@@ -205,7 +199,7 @@ if __name__ == "__main__":
             t_load += default_timer() - t_1
             t_1 = default_timer()
 
-            loss, cls_loss = 0. , 0.
+            loss, cls_loss ,loss_gate_total = 0. , 0. , 0.
             xx = xx.to(device)  ## B, n, n, T_in, C
             yy = yy.to(device)  ## B, n, n, T_ar, C
             msk = msk.to(device)
@@ -218,8 +212,11 @@ if __name__ == "__main__":
 
                 ### auto-regressive training
                 xx = xx + args.noise_scale *torch.sum(xx**2, dim=(1,2,3),keepdim=True)**0.5 * torch.randn_like(xx)
-                im, cls_pred = model(xx)
+                # im, cls_pred = model(xx)
+                im, cls_pred, loss_gate= model(xx) # 加入了loss_gate
+
                 loss += myloss(im, y, mask=msk)
+                loss_gate_total += loss_gate*args.moe_loss_weight # 加入moe损失
 
                 ### classification
                 pred_labels = torch.argmax(cls_pred,dim=1)
@@ -238,11 +235,8 @@ if __name__ == "__main__":
             train_l2_full += l2_full.item()
 
             optimizer.zero_grad()
-            # avg_loss = loss / xx.shape[0]
-            # avg_loss.backward()
-            total_loss = loss + 0.0 * cls_loss
+            total_loss = loss + loss_gate_total + 0.0*cls_loss
             accelerator.backward(total_loss)
-            # total_loss.backward()
             nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
             optimizer.step()
             scheduler.step()
@@ -282,7 +276,7 @@ if __name__ == "__main__":
 
                     for t in range(0, yy.shape[-2], args.T_bundle):
                         y = yy[..., t:t + args.T_bundle, :]
-                        im, _ = model(xx)
+                        im, _ ,_= model(xx)
                         loss += myloss(im, y, mask=msk)
 
                         if t == 0:

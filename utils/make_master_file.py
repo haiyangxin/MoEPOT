@@ -10,7 +10,7 @@ DATASET_LIST = []
 
 ### classic benchmark
 name = 'ns2d_fno_1e-5'
-DATASET_DICT[name] = {'train_path': './data/large/ns2d_1e-5_train.hdf5', 'test_path': './data/large/ns2d_1e-5_test.hdf5'}
+DATASET_DICT[name] = {'train_path': 'data/large/ns2d_1e-5_train.hdf5', 'test_path': 'data/large/ns2d_1e-5_test.hdf5'}
 DATASET_DICT[name]['train_size'] = 1000
 DATASET_DICT[name]['test_size'] = 200
 DATASET_DICT[name]['scatter_storage']= False
@@ -21,9 +21,32 @@ DATASET_DICT[name]['in_size'] = (64, 64)
 DATASET_DICT[name]['n_channels'] = 1
 DATASET_DICT[name]['downsample'] = (1, 1)
 
+name = 'wave_layer'
+DATASET_DICT[name] = {'train_path': 'data/large/Wave_Layer_train.hdf5', 'test_path': 'data/large/Wave_Layer_valid.hdf5'}
+DATASET_DICT[name]['train_size'] = 2000
+DATASET_DICT[name]['test_size'] = 100
+DATASET_DICT[name]['scatter_storage'] = False
+DATASET_DICT[name]['t_test'] = 5
+DATASET_DICT[name]['t_in'] = 10
+DATASET_DICT[name]['t_total'] = 21
+DATASET_DICT[name]['in_size'] = (128,128)
+DATASET_DICT[name]['n_channels'] = 1
+DATASET_DICT[name]['downsample'] = (1, 1)
+
+name = 'wave_gauss'
+DATASET_DICT[name] = {'train_path': 'data/large/Wave_Gauss_train.hdf5', 'test_path': 'data/large/Wave_Gauss_valid.hdf5'}
+DATASET_DICT[name]['train_size'] = 2000
+DATASET_DICT[name]['test_size'] = 100
+DATASET_DICT[name]['scatter_storage'] = False
+DATASET_DICT[name]['t_test'] = 5
+DATASET_DICT[name]['t_in'] = 10
+DATASET_DICT[name]['t_total'] = 16
+DATASET_DICT[name]['in_size'] = (128,128)
+DATASET_DICT[name]['n_channels'] = 1
+DATASET_DICT[name]['downsample'] = (1, 1)
 
 name = 'ns2d_fno_1e-4'
-DATASET_DICT[name] = {'train_path': './data/large/ns2d_1e-4_train.hdf5', 'test_path': './data/large/ns2d_1e-4_test.hdf5'}
+DATASET_DICT[name] = {'train_path': 'data/large/ns2d_1e-4_train.hdf5', 'test_path': 'data/large/ns2d_1e-4_test.hdf5'}
 DATASET_DICT[name]['train_size'] = 9800
 DATASET_DICT[name]['test_size'] = 200
 DATASET_DICT[name]['scatter_storage'] = False
@@ -37,8 +60,8 @@ DATASET_DICT[name]['downsample'] = (1, 1)
 
 
 name = 'ns2d_fno_1e-3'
-DATASET_DICT[name] = {'train_path': './data/large/ns2d_1e-3_train.hdf5', 'test_path': './data/large/ns2d_1e-3_test.hdf5'}
-DATASET_DICT[name]['train_size'] = 1000
+DATASET_DICT[name] = {'train_path': 'data/large/ns2d_1e-3_train.hdf5', 'test_path': 'data/large/ns2d_1e-3_test.hdf5'}
+DATASET_DICT[name]['train_size'] = 4800
 DATASET_DICT[name]['test_size'] = 200
 DATASET_DICT[name]['scatter_storage'] = False
 DATASET_DICT[name]['t_test'] = 20   ## predict 10 timesteps for testing
@@ -51,12 +74,12 @@ DATASET_DICT[name]['downsample'] = (1, 1)
 
 name = 'ns2d_pdb_M1_eta1e-1_zeta1e-1'
 # DATASET_DICT[name] = {'train_path': './data/large/ns2d_pdb_M1_eta1e-2_zeta1e-2_train.hdf5', 'test_path': './data/large/ns2d_pdb_M1_eta1e-2_zeta1e-2_test.hdf5'}
-DATASET_DICT[name] = {'train_path': './data/large/pdebench/ns2d_pdb_M1_eta1e-1_zeta1e-1/train', 'test_path': './data/large/pdebench/ns2d_pdb_M1_eta1e-1_zeta1e-1/test'}
+DATASET_DICT[name] = {'train_path': 'data/large/pdebench/ns2d_pdb_M1_eta1e-1_zeta1e-1/train', 'test_path': 'data/large/pdebench/ns2d_pdb_M1_eta1e-1_zeta1e-1/test'}
 # DATASET_DICT[name] = {'train_path': '/datasets/opb/pretrain/ns2d_pdb_M1_eta1e-2_zeta1e-2/train', 'test_path': '/datasets/opb/pretrain/ns2d_pdb_M1_eta1e-2_zeta1e-2/test'}
 DATASET_DICT[name]['train_size'] = 9000
 DATASET_DICT[name]['test_size'] = 200       ### default 200, maximum 1000
 DATASET_DICT[name]['scatter_storage'] = True
-DATASET_DICT[name]['t_test'] = 11   ## predict 10 timesteps for testing
+DATASET_DICT[name]['t_test'] = 11   ## predict 11 timesteps for testing
 DATASET_DICT[name]['t_in'] = 10     ## use 10 as prefix steps, not necessary used
 DATASET_DICT[name]['t_total'] = 21
 DATASET_DICT[name]['in_size'] = (128, 128)
@@ -66,7 +89,7 @@ DATASET_DICT[name]['downsample'] = (1, 1)
 
 name = 'ns2d_pdb_M1_eta1e-2_zeta1e-2'
 # DATASET_DICT[name] = {'train_path': './data/large/ns2d_pdb_M1_eta1e-2_zeta1e-2_train.hdf5', 'test_path': './data/large/ns2d_pdb_M1_eta1e-2_zeta1e-2_test.hdf5'}
-DATASET_DICT[name] = {'train_path': './data/large/pdebench/ns2d_pdb_M1_eta1e-2_zeta1e-2/train', 'test_path': './data/large/pdebench/ns2d_pdb_M1_eta1e-2_zeta1e-2/test'}
+DATASET_DICT[name] = {'train_path': 'data/large/pdebench/ns2d_pdb_M1_eta1e-2_zeta1e-2/train', 'test_path': 'data/large/pdebench/ns2d_pdb_M1_eta1e-2_zeta1e-2/test'}
 # DATASET_DICT[name] = {'train_path': '/datasets/opb/pretrain/ns2d_pdb_M1_eta1e-2_zeta1e-2/train', 'test_path': '/datasets/opb/pretrain/ns2d_pdb_M1_eta1e-2_zeta1e-2/test'}
 DATASET_DICT[name]['train_size'] = 9000
 DATASET_DICT[name]['test_size'] = 200       ### default 200, maximum 1000
@@ -80,7 +103,7 @@ DATASET_DICT[name]['downsample'] = (1, 1)
 
 
 name = 'ns2d_pdb_M1e-1_eta1e-1_zeta1e-1'
-DATASET_DICT[name] = {'train_path': './data/large/pdebench/ns2d_pdb_M1e-1_eta1e-1_zeta1e-1/train', 'test_path': './data/large/pdebench/ns2d_pdb_M1e-1_eta1e-1_zeta1e-1/test'}
+DATASET_DICT[name] = {'train_path': 'data/large/pdebench/ns2d_pdb_M1e-1_eta1e-1_zeta1e-1/train', 'test_path': 'data/large/pdebench/ns2d_pdb_M1e-1_eta1e-1_zeta1e-1/test'}
 DATASET_DICT[name]['train_size'] = 9000
 DATASET_DICT[name]['test_size'] = 200       ### default 200, maximum 1000
 DATASET_DICT[name]['scatter_storage'] = True
@@ -93,7 +116,7 @@ DATASET_DICT[name]['downsample'] = (1, 1)
 
 
 name = 'ns2d_pdb_M1e-1_eta1e-2_zeta1e-2'
-DATASET_DICT[name] = {'train_path': './data/large/pdebench/ns2d_pdb_M1e-1_eta1e-2_zeta1e-2/train', 'test_path': './data/large/pdebench/ns2d_pdb_M1e-1_eta1e-2_zeta1e-2/test'}
+DATASET_DICT[name] = {'train_path': 'data/large/pdebench/ns2d_pdb_M1e-1_eta1e-2_zeta1e-2/train', 'test_path': 'data/large/pdebench/ns2d_pdb_M1e-1_eta1e-2_zeta1e-2/test'}
 DATASET_DICT[name]['train_size'] = 9000
 DATASET_DICT[name]['test_size'] = 200       ### default 200, maximum 1000
 DATASET_DICT[name]['scatter_storage'] = True
@@ -242,7 +265,7 @@ DATASET_DICT[name]['downsample'] = (1, 1, 1)
 
 
 name = 'swe_pdb'
-DATASET_DICT[name] = {'train_path': './data/large/pdebench/swe_pdb/train', 'test_path': './data/large/pdebench/swe_pdb/test'}
+DATASET_DICT[name] = {'train_path': 'data/large/pdebench/swe_pdb/train', 'test_path': 'data/large/pdebench/swe_pdb/test'}
 DATASET_DICT[name]['train_size'] = 900
 DATASET_DICT[name]['test_size'] = 60       ### default 60, maximum 100
 DATASET_DICT[name]['scatter_storage'] = True
@@ -254,7 +277,7 @@ DATASET_DICT[name]['n_channels'] = 1
 DATASET_DICT[name]['downsample'] = (1, 1)
 
 name = 'dr_pdb'
-DATASET_DICT[name] = {'train_path': './data/large/pdebench/dr_pdb/train', 'test_path': './data/large/pdebench/dr_pdb/test'}
+DATASET_DICT[name] = {'train_path': 'data/large/pdebench/dr_pdb/train', 'test_path': 'data/large/pdebench/dr_pdb/test'}
 DATASET_DICT[name]['train_size'] = 900
 DATASET_DICT[name]['test_size'] = 60       ### default 200, maximum 100
 DATASET_DICT[name]['scatter_storage'] = True
@@ -267,11 +290,11 @@ DATASET_DICT[name]['downsample'] = (1, 1)
 
 
 name = 'cfdbench'
-DATASET_DICT[name] = {'train_path': './data/large/cfdbench/ns2d_cdb_train.hdf5', 'test_path': './data/large/cfdbench/ns2d_cdb_test.hdf5'}
+DATASET_DICT[name] = {'train_path': 'data/large/cfdbench/ns2d_cdb_train.hdf5', 'test_path': 'data/large/cfdbench/ns2d_cdb_test.hdf5'}
 DATASET_DICT[name]['train_size'] = 9000
 DATASET_DICT[name]['test_size'] = 1000       ### default 200, maximum 1000
 DATASET_DICT[name]['scatter_storage'] = False
-DATASET_DICT[name]['t_test'] = 20   ## predict 10 timesteps for testing
+DATASET_DICT[name]['t_test'] = 10   ## predict 10 timesteps for testing
 DATASET_DICT[name]['t_in'] = 10     ## use 10 as prefix steps, not necessary used
 DATASET_DICT[name]['t_total'] = 20
 DATASET_DICT[name]['in_size'] = (64, 64)
@@ -297,7 +320,7 @@ DATASET_DICT[name]['downsample'] = (1, 1)
 name = 'ns2d_pda'
 DATASET_DICT[name] = {'train_path': './data/large/pdearena/ns2d_pda/train', 'test_path': './data/large/pdearena/ns2d_pda/test'}
 DATASET_DICT[name]['train_size'] = 6500
-DATASET_DICT[name]['test_size'] = 650       ### default 650, maximum 1300
+DATASET_DICT[name]['test_size'] = 200       ### default 650, maximum 1300
 DATASET_DICT[name]['scatter_storage'] = True
 DATASET_DICT[name]['t_test'] = 4   ## predict 10 timesteps for testing
 DATASET_DICT[name]['t_in'] = 10     ## use 10 as prefix steps, not necessary used
@@ -308,7 +331,7 @@ DATASET_DICT[name]['downsample'] = (1, 1)
 
 
 name = 'sw2d_pda'
-DATASET_DICT[name] = {'train_path': './data/large/pdearena/sw2d_pda/train', 'test_path': './data/large/pdearena/sw2d_pda/test'}
+DATASET_DICT[name] = {'train_path': 'data/large/pdearena/sw2d_pda/train', 'test_path': 'data/large/pdearena/sw2d_pda/test'}
 DATASET_DICT[name]['train_size'] = 7000
 DATASET_DICT[name]['test_size'] = 400       ### default 400, maximum 1400
 DATASET_DICT[name]['scatter_storage'] = True

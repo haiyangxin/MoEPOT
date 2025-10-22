@@ -28,7 +28,7 @@ from utils.griddataset import MixedTemporalDataset
 from utils.make_master_file import DATASET_DICT
 from models.unet import UNet
 from models.fno import FNO2d
-from models.dpot import DPOTNet
+from MoEPOT.models.moepot import MoEPOTNet
 from models.dpot_res import CDPOTNet
 # from models.gnot_legacy import CGPTNO
 import pickle

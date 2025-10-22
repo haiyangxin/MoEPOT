@@ -1,7 +1,7 @@
 name: NS2d
 file: finetune.py
 
-model: DPOT
+model: MoEPOT
 dataset: ns2d
 use_writer: True
 res: 128
@@ -22,75 +22,63 @@ grad_clip: 10000.0
 beta1: 0.9
 beta2: 0.9
 n_channels: 4
-n_class: 12
+n_class: 6
 
 ##########################################
 ############ Tiny models
 ##########################################
-#resume_path: 'logs_pretrain/DPOT_tiny_model.pth'
-#load_components: ['all']
-#n_layers: 4
-#n_blocks: 4
-#mlp_ratio: 1
-#width: 512
+resume_path: './logs_pretrain/checkpoints/model_moepot_tiny.pth'
+load_components: ['all']
+n_layers: 4
+n_blocks: 4
+mlp_ratio: 1
+width: 512
 
 ########################################
 ##########  Small models
 ########################################
 
-resume_path: './logs_pretrain/DPOT_small_model.pth'
-load_components: ['all']
-n_layers: 6
-n_blocks: 8
-mlp_ratio: 1
-width: 1024
+# resume_path: './logs_pretrain/checkpoints/model_moepot_small.pth'
+# load_components: ['all']
+# n_layers: 6
+# n_blocks: 8
+# mlp_ratio: 1
+# width: 1024
 
 
 ##########################################
 ############  Medium models
 ##########################################
-#resume_path: 'logs_pretrain/DPOT_medium_model.pth'
-#load_components: ['all']
-#n_layers: 12
-#n_blocks: 8
-#mlp_ratio: 4
-#width: 1024
-
-#
-##########################################
-############  Large models
-##########################################
-#resume_path: 'logs_pretrain/DPOT_large_model.pth'
-#load_components: ['all']
-#n_layers: 24
-#n_blocks: 16
-#mlp_ratio: 4
-#width: 1536
-#out_layer_dim: 128
+# resume_path: './logs_pretrain/checkpoints/model_moepot_medium.pth'
+# load_components: ['all']
+# n_layers: 8
+# n_blocks: 8
+# mlp_ratio: 2
+# width: 1024
 
 tasks:
-  comment: ['Sft_pda']
+  comment: ['ns1e-5_tft_1000']
 
-  epochs: [200]
-  warmup_epochs: [40]
-  batch_size: [32]
+  epochs: [500]
+  warmup_epochs: [100]
+  batch_size: [20]
   noise_scale: [0.0]
   train_paths: [
-#         ['ns2d_fno_1e-5'],
-#         ['ns2d_fno_1e-4'],
+         ['ns2d_fno_1e-5'],
+#          ['ns2d_fno_1e-4'],
 #         ['ns2d_fno_1e-3'],
 #         ['ns2d_pdb_M1_eta1e-1_zeta1e-1'],
 #         ['ns2d_pdb_M1_eta1e-2_zeta1e-2'],
 #         ['ns2d_pdb_M1e-1_eta1e-1_zeta1e-1'],
 #         ['ns2d_pdb_M1e-1_eta1e-2_zeta1e-2'],
-#        ['swe_pdb']
+#         ['swe_pdb']
 #         ['dr_pdb'],
 #         ['ns2d_pda'],
-        ['ns2d_cond_pda']
+#        ['ns2d_cond_pda']
 #         ['cfdbench'],
   ]
   test_paths: [
-#             ['ns2d_fno_1e-5'],
+        ['ns2d_fno_1e-5'],
 #        ['ns2d_fno_1e-4'],
 #        ['ns2d_fno_1e-3'],
 #        ['ns2d_pdb_M1_eta1e-1_zeta1e-1'],
@@ -99,16 +87,15 @@ tasks:
 #         ['ns2d_pdb_M1e-1_eta1e-2_zeta1e-2'],
 #        ['swe_pdb']
 #        ['dr_pdb'],
-#        ['ns2d_pda'],
-        ['ns2d_cond_pda']
+#         ['ns2d_pda'],
+#        ['ns2d_cond_pda']
 #        ['cfdbench'],
   ]
   ntrain_list: [
-#        [9800],
+         [1000],
 #        [1000],
 #        [9000],
 #        [900],
-#        [6500],
-         [3100]
-#        [9000],
+#         [900],
+#        [9000],  
   ]

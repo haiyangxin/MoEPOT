@@ -5,7 +5,7 @@ import numpy as np
 import os
 import random
 import scipy
-import scipy.io
+from scipy.io import loadmat
 import h5py
 def preprocess_ns2d():
     def preprocess(path):
@@ -16,21 +16,24 @@ def preprocess_ns2d():
         print(y.shape)
         pickle.dump(y,open(path,'wb'))
 
-    # preprocess('/home/haozhongkai/files/ml4phys/mgn/pdessl/data/ns2d/ns2d_1e-4_test.pkl')
+    # preprocess('/home/haozhongkai/files/ml4phys/mgn/pdessl/data/ns2d/ns2d_1e-4_test.pkl') 
     # preprocess('/home/haozhongkai/files/ml4phys/mgn/pdessl/data/ns2d/ns2d_1e-4_train.pkl')
     # preprocess('/home/haozhongkai/files/ml4phys/mgn/pdessl/data/ns2d/ns2d_1e-5_test.pkl')
     preprocess('/home/haozhongkai/files/ml4phys/mgn/pdessl/data/ns2d/ns2d_1e-5_train.pkl')
 
 
 def preprocess_mat():
-    data = h5py.File('/home/haozhongkai/files/ml4phys/mgn/pdessl/data/ns2d/ns_V1e-3_N5000_T50.mat')
+    # data = h5py.File('/home/hwang/xhy2878/DPOT/data/ns2d/ns_V1e-5_N1200_T20.mat')
+    data = loadmat('/data/xhy2878/DPOT/data/ns2d/ns_V1e-5_N1200_T20.mat')
+    print(data.keys())  # 查看文件中包含的键
     data = np.array(data['u'])
-    data = np.transpose(data, (3,1,2,0))
-    train_u = data[:4800]
-    test_u = data[4800:]
+    # data = np.transpose(data, (3,1,2,0))
+    print(data.shape)
+    train_u = data[:1000]
+    test_u = data[1000:]
     print(train_u.shape, test_u.shape)
-    pickle.dump(train_u, open('/home/haozhongkai/files/ml4phys/mgn/pdessl/data/ns2d/ns2d_1e-3_train.pkl','wb'))
-    pickle.dump(test_u, open('/home/haozhongkai/files/ml4phys/mgn/pdessl/data/ns2d/ns2d_1e-3_test.pkl','wb'))
+    pickle.dump(train_u, open('/data/xhy2878/DPOT/data/ns2d/ns2d_1e-5_train.pkl','wb'))
+    pickle.dump(test_u, open('/data/xhy2878/DPOT/data/ns2d/ns2d_1e-5_test.pkl','wb'))
 
 
 def save_hdf5():
@@ -68,21 +71,21 @@ def save_hdf5_g45():
 
     # 文件名列表
     file_names = [
-        "ns2d_1e-3_test.pkl", "ns2d_1e-3_train.pkl",
-        "ns2d_1e-4_test.pkl", "ns2d_1e-4_train.pkl",
-        "ns2d_1e-5_test.pkl", "ns2d_1e-5_train.pkl"
+        # "ns2d_1e-3_test.pkl", "ns2d_1e-3_train.pkl", #[5000,64,64,50]
+        # "ns2d_1e-4_test.pkl", "ns2d_1e-4_train.pkl",  #[10000,64,64,50]
+        "ns2d_1e-5_test.pkl", "ns2d_1e-5_train.pkl"  #[1200,64,64,20]
     ]
 
     for fname in file_names:
         # 读取pickle文件
-        with open(os.path.join('./../../data/ns2d',fname), 'rb') as f:
+        with open(os.path.join('/data/xhy2878/DPOT/data/ns2d',fname), 'rb') as f:
             data = pickle.load(f)
 
         # 创建对应的hdf5文件名
         hdf5_name = os.path.splitext(fname)[0] + '.hdf5'
 
         # 将数据写入hdf5文件
-        with h5py.File(os.path.join('./../../data/large',hdf5_name), 'w') as hf:
+        with h5py.File(os.path.join('/data/xhy2878/DPOT/data/large',hdf5_name), 'w') as hf:
             hf.create_dataset('data', data=data)
 
     print("Conversion completed!")
@@ -132,6 +135,7 @@ def process_pdebench_data(path='/datasets/opb/griddataset/pdebench/164693',save_
         f.create_dataset('data', data=data[:n_train],chunks=(1, *data.shape[1:]),compression=None)
     with h5py.File(save_name + '_test.hdf5' ,'w') as f:
         f.create_dataset('data', data=data[-n_test:],chunks=(1, *data.shape[1:]),compression=None)
+    
 
     def split_data(N):
         """
@@ -326,8 +330,8 @@ def process_pdebench3d_data(path,save_name,n_train=90, n_test=10):
     print('file saved')
 
 
-preprocess_ns2d()
-# preprocess_mat()
+# preprocess_ns2d()
+preprocess_mat()
 # save_hdf5()
 
 ### unfinished: 93(3d), 90(2d)
@@ -355,7 +359,7 @@ save_hdf5_g45()
 # process_dr_pdebench(path='./../../data/large/pdebench/133017',save_name='./../../data/large/pdebench/dr_pdb',n_train=900, n_test=100)
 # process_pdebench3d_data(path='./../../data/large/pdebench/164693',save_name='./../../data/large/pdebench/ns3d_pdb_M1_rand',n_train=90, n_test=10)
 # process_pdebench3d_data(path='./../../data/large/pdebench/173286',save_name='./../../data/large/pdebench/ns3d_pdb_M1e-1_rand',n_train=90, n_test=10)
-process_pdebench3d_data(path='./../../data/large/pdebench/164694',save_name='./../../data/large/pdebench/ns3d_pdb_M1_turb',n_train=540, n_test=60)
+# process_pdebench3d_data(path='./../../data/large/pdebench/164694',save_name='./../../data/large/pdebench/ns3d_pdb_M1_turb',n_train=540, n_test=60)
 
 
 
