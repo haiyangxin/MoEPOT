@@ -8,13 +8,13 @@ legacy/
 data/
 logs/
 logs_pretrain/
-dataset_config.csv
 interpretability_moe_2.py
 interpretability_moe.py
 visual_train.py
 README-dpot.md
 resources/dpot.jpg
 dataset
+evaluate_varyingres.py
 test.sh
 
 # Byte-compiled / optimized / DLL files
