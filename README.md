@@ -1,6 +1,6 @@
 ## MoE-POT:Mixture-of-Experts Operator Transformer for Large-Scale PDE Pre-Training (NeurIPS 2025)
 
-Code for [paper] MoEPOT: Auto-Regressive Denoising Operator Transformer for Large-Scale PDE Pre-Training (NeurIPS'2025). It pretrains neural operator transformers (from **30M** to **0.5B**)  on multiple PDE datasets. Pre-trained weights could be found at [here] (https://huggingface.co/xhy2878/MoEPOT)  (I have also uploaded the corresponding training results for DPOT ).
+Code for [paper] MoEPOT: Auto-Regressive Denoising Operator Transformer for Large-Scale PDE Pre-Training (NeurIPS'2025). It pretrains neural operator transformers (from **30M** to **0.5B**)  on multiple PDE datasets. Pre-trained weights could be found at [here](https://huggingface.co/xhy2878/MoEPOT)  (I have also uploaded the corresponding training results for DPOT ).
 
 ![fig1](/resources/MoE-POT.png)
 
@@ -31,8 +31,8 @@ In `data_generation/preprocess.py`,  we have the script for preprocessing the da
 | ------------- | ------------------------------------------------------------ |
 | FNO data      | [Here](https://drive.google.com/drive/folders/1UnbQh2WWc6knEHbLn-ZaXrKUZhp7pjt-) |
 | PDEBench data | [Here](https://darus.uni-stuttgart.de/dataset.xhtml?persistentId=doi:10.18419/darus-2986) |
-| PDEArena data | [Here](https://microsoft.github.io/pdearena/datadownload/)   |
-| CFDbench data | [Here](https://cloud.tsinghua.edu.cn/d/435413b55dea434297d1/) |
+| PDEArena data | [Here](https://huggingface.co/pdearena/datasets)   |
+| CFDbench data | [Here](https://huggingface.co/datasets/chen-yingfa/CFDBench) |
 
 In `utils/make_master_file.py` , we have all dataset configurations. When new datasets are merged, you should add a configuration dict. It stores all relative paths so that you could run on any places. 
 

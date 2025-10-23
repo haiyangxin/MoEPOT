@@ -17,6 +17,9 @@ resources/dpot_result.jpg
 dataset
 evaluate_varyingres.py
 checkpoints_push.py
+models/Physics_Attention.py
+models/Transolver_Structured_Mesh_2D.py
+models/Embedding.py
 test.sh
 
 # Byte-compiled / optimized / DLL files
