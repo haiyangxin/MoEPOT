@@ -30,11 +30,28 @@ In `data_generation/preprocess.py`,  we have the script for preprocessing the da
 | Dataset       | Link                                                         |
 | ------------- | ------------------------------------------------------------ |
 | FNO data      | [Here](https://drive.google.com/drive/folders/1UnbQh2WWc6knEHbLn-ZaXrKUZhp7pjt-) |
-| PDEBench data | [Here](https://darus.uni-stuttgart.de/dataset.xhtml?persistentId=doi:10.18419/darus-2986) |
+| PDEBench data | [Here](https://github.com/pdebench/PDEBench/blob/main/pdebench/data_download/pdebench_data_urls.csv) |
 | PDEArena data | [Here](https://huggingface.co/pdearena/datasets)   |
 | CFDbench data | [Here](https://huggingface.co/datasets/chen-yingfa/CFDBench) |
 
 In `utils/make_master_file.py` , we have all dataset configurations. When new datasets are merged, you should add a configuration dict. It stores all relative paths so that you could run on any places. 
+
+### Naming convention in the code
+
+In the code, we refer to the datasets by a different identifier than the original datasets, see the following table for a mapping,For specific data processing, please refer to `data_generation/preprocess.py`:
+
+|Code Identifier|Original dataset|
+| ----------------|------------------------- |
+|ns2d_fno_1e-5|NavierStokes_V1e-5_N1200_T20|
+|ns2d_fno_1e-4|NavierStokes_V1e-4_N10000_T30|
+|ns2d_fno_1e-3|NavierStokes_V1e-3_N5000_T50|
+|ns2d_pdb_M1e-1_eta1e-2_zeta1e-2|2D_CFD_Rand_M0.1_Eta0.01_Zeta0.01_periodic_128_Train.hdf5|
+|ns2d_pdb_M1_eta1e-2_zeta1e-2|2D_CFD_Rand_M1.0_Eta0.01_Zeta0.01_periodic_128_Train.hdf5|
+|swe_pdb|2D_rdb_NA_NA.h5|
+|dr_pdb|2D_diff-react_NA_NA.h5|
+|cfdbench|CFDBench|
+|ns2d_pda|NavierStokes-2D|
+|ns2d_cond_pda|NavierStokes-2D-conditoned|
 
 ##### Single GPU Pre-training
 
@@ -86,7 +103,7 @@ conda install timm einops tensorboard -c conda-forge
   - `criterion.py`:  loss functions of relative error
   - `griddataset.py`: dataset of mixture of temporal uniform grid dataset
   - `make_master_file.py`: datasets config file
-  - `normalizer`: normalization methods (#TODO: implement instance reversible norm)
+  - `normalizer`: normalization methods
   - `optimizer`: Adam/AdamW/Lamb optimizer supporting complex numbers
   - `utilities.py`: other auxiliary functions
 - `configs/`: configuration files for pre-training or fine-tuning
@@ -95,3 +112,10 @@ conda install timm einops tensorboard -c conda-forge
   - `MoE_conv.py`:      moe model
   - `fno.py`:          FNO with group normalization
   - `mlp.py`
+
+  ### Acknowledgements
+  We would like to thank the following open-source projects and research works:
+
+  [DPOT](https://github.com/HaoZhongkai/DPOT) for model architecture
+
+  [poseidon](https://github.com/camlab-ethz/poseidon) for dataset

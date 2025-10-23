@@ -127,51 +127,6 @@ DATASET_DICT[name]['in_size'] = (128, 128)
 DATASET_DICT[name]['n_channels'] = 4
 DATASET_DICT[name]['downsample'] = (1, 1)
 
-# # Superbench
-# SUPER_BENCH_PATH = 'data/large/superbench'
-# # Read .h5 file and get the shape
-# def get_shape(path):
-#     with h5py.File(path, 'r') as f:
-#         # There will be only one dataset in the file
-#         for key in f.keys():
-#             return f[key].shape
-# # Get the folder names in the SUPER_BENCH_PATH
-# datasets = os.listdir(SUPER_BENCH_PATH)
-# datasets = [dataset for dataset in datasets if dataset != 'superbench_v1']
-# for dataset in datasets:
-#     # Get all the files in SUPER_BENCH_PATH/dataset/train
-#     train_files = os.listdir(os.path.join(SUPER_BENCH_PATH, dataset, 'train'))
-#     for train_file in train_files:
-#         # Get the shape of the file
-#         train_shape = get_shape(os.path.join(SUPER_BENCH_PATH, dataset, 'train', train_file))
-#         # Get all other files
-#         sub_folders = ['test_1', 'test_2', 'valid_1', 'valid_2']
-#
-#         for sub_folder in sub_folders:
-#             test_files = os.listdir(
-#                 os.path.join(SUPER_BENCH_PATH, dataset, sub_folder))
-#
-#             # Initialize the dataset dict
-#             for test_file in test_files:
-#                 # Get the shape of the file
-#                 test_shape = get_shape(
-#                     os.path.join(SUPER_BENCH_PATH, dataset, sub_folder, test_file))
-#                 name = dataset + '_' + test_file.replace('.hdf5', '')
-#                 DATASET_DICT[name] = {
-#                     'train_path': os.path.join(SUPER_BENCH_PATH,
-#                         dataset, 'train', train_file),
-#                     'test_path': os.path.join(SUPER_BENCH_PATH,
-#                         dataset, sub_folder, test_file)}
-#                 DATASET_DICT[name]['train_size'] = train_shape[0]
-#                 DATASET_DICT[name]['test_size'] = test_shape[0]
-#                 DATASET_DICT[name]['scatter_storage'] = False
-#                 DATASET_DICT[name]['t_test'] = 40
-#                 DATASET_DICT[name]['t_in'] = 10
-#                 DATASET_DICT[name]['t_total'] = 50
-#                 DATASET_DICT[name]['in_size'] = (train_shape[1], train_shape[2])
-#                 DATASET_DICT[name]['n_channels'] = train_shape[4]
-#                 DATASET_DICT[name]['downsample'] = (1, 1)
-
 
 name = 'ns2d_pdb_M1e-1_eta1e-8_zeta1e-8_turb_512'
 DATASET_DICT[name] = {'train_path': './data/large/pdebench/ns2d_pdb_M1e-1_eta1e-8_zeta1e-8_turb_512/train', 'test_path': './data/large/pdebench/ns2d_pdb_M1e-1_eta1e-8_zeta1e-8_turb_512/test'}
