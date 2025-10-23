@@ -16,6 +16,7 @@ resources/dpot.jpg
 resources/dpot_result.jpg
 dataset
 evaluate_varyingres.py
+checkpoints_push.py
 test.sh
 
 # Byte-compiled / optimized / DLL files

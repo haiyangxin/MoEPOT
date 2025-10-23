@@ -1,6 +1,6 @@
 ## MoE-POT:Mixture-of-Experts Operator Transformer for Large-Scale PDE Pre-Training (NeurIPS 2025)
 
-Code for [paper] MoEPOT: Auto-Regressive Denoising Operator Transformer for Large-Scale PDE Pre-Training (NeurIPS'2025). It pretrains neural operator transformers (from **30M** to **0.5B**)  on multiple PDE datasets. Pre-trained weights could be found at here (I have also uploaded the corresponding training results for DPOT ).
+Code for [paper] MoEPOT: Auto-Regressive Denoising Operator Transformer for Large-Scale PDE Pre-Training (NeurIPS'2025). It pretrains neural operator transformers (from **30M** to **0.5B**)  on multiple PDE datasets. Pre-trained weights could be found at [here] (https://huggingface.co/xhy2878/MoEPOT)  (I have also uploaded the corresponding training results for DPOT ).
 
 ![fig1](/resources/MoE-POT.png)
 
