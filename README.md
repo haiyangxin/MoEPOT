@@ -1,4 +1,4 @@
-## MoE-POT:Mixture-of-Experts Operator Transformer for Large-Scale PDE Pre-Training (NeurIPS 2025)
+## MoE-POT: Mixture-of-Experts Operator Transformer for Large-Scale PDE Pre-Training (NeurIPS 2025)
 
 Code for [paper] MoEPOT: Auto-Regressive Denoising Operator Transformer for Large-Scale PDE Pre-Training (NeurIPS'2025). It pretrains neural operator transformers (from **30M** to **0.5B**)  on multiple PDE datasets. Pre-trained weights could be found at [here](https://huggingface.co/xhy2878/MoEPOT)  (I have also uploaded the corresponding training results for DPOT ).
 
@@ -114,8 +114,24 @@ conda install timm einops tensorboard -c conda-forge
   - `mlp.py`
 
   ### Acknowledgements
-  We would like to thank the following open-source projects and research works:
+  We would like to express our gratitude to all collaborators, fellow students, and anonymous reviewers for their valuable assistance. Special thanks are extended to [Zhongkai Hao](https://haozhongkai.github.io/) and [Kuan Xu](http://staff.ustc.edu.cn/~kuanxu/) for their significant support.
+  And we would like to thank the following open-source projects and research works:
 
   [DPOT](https://github.com/HaoZhongkai/DPOT) for model architecture
 
   [poseidon](https://github.com/camlab-ethz/poseidon) for dataset
+
+  ### Citation
+  If you use MoE-POT in your research, please use the following BibTeX entry.
+
+  ```
+  @misc{wang2025mixtureofexpertsoperatortransformerlargescale,
+      title={Mixture-of-Experts Operator Transformer for Large-Scale PDE Pre-Training}, 
+      author={Hong Wang and Haiyang Xin and Jie Wang and Xuanze Yang and Fei Zha and Huanshuo Dong and Yan Jiang},
+      year={2025},
+      eprint={2510.25803},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2510.25803}, 
+}
+```
