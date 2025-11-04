@@ -19,20 +19,20 @@ class ParallelTrainer:
             return yaml.safe_load(file)
 
     def get_available_gpus(self):
-        # cmd = "nvidia-smi --query-gpu=index,memory.used --format=csv,noheader,nounits"
-        # output = subprocess.check_output(cmd, shell=True).decode('utf-8').strip()
-        # lines = output.split("\n")
+        cmd = "nvidia-smi --query-gpu=index,memory.used --format=csv,noheader,nounits"
+        output = subprocess.check_output(cmd, shell=True).decode('utf-8').strip()
+        lines = output.split("\n")
 
-        # # Extract GPUs with memory usage less than a certain threshold (e.g., 500 MB)
-        # free_gpus = [int(line.split(",")[0].strip()) for line in lines if
-        #              int(line.split(",")[1].strip().split(" ")[0]) < 6000]
+        # Extract GPUs with memory usage less than a certain threshold (e.g., 500 MB)
+        free_gpus = [int(line.split(",")[0].strip()) for line in lines if
+                     int(line.split(",")[1].strip().split(" ")[0]) < 6000]
 
-        # # If 'device' is specified in the config, filter the available GPUs
-        # if 'device' in self.config:
-        #     specified_gpus_str = self.config['device']
-        #     specified_gpus = [int(gpu) for gpu in specified_gpus_str.split(',')]
-        #     free_gpus = [gpu for gpu in free_gpus if gpu in specified_gpus]
-        free_gpus = [0,1] # 先用两张卡进行测试
+        # If 'device' is specified in the config, filter the available GPUs
+        if 'device' in self.config:
+            specified_gpus_str = self.config['device']
+            specified_gpus = [int(gpu) for gpu in specified_gpus_str.split(',')]
+            free_gpus = [gpu for gpu in free_gpus if gpu in specified_gpus]
+        # free_gpus = [0,1] # 先用两张卡进行测试
 
         return free_gpus
 
